@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GasSolución 🇪🇨</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; background-color: #f7f9fc; padding: 20px; color: #333; }
+        .container { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        h1 { color: #d32f2f; margin-bottom: 5px; }
+        input { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
+        .btn-registro { background: #d32f2f; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn-gas { 
+            background: #ffca28; border: none; padding: 20px; font-size: 24px; font-weight: bold; 
+            border-radius: 50%; width: 220px; height: 220px; cursor: pointer; 
+            box-shadow: 0 10px 25px rgba(255, 202, 40, 0.4); margin-top: 20px; color: #212121;
+        }
+        .hidden { display: none; }
+        .user-info { font-size: 0.9rem; color: #666; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GasSolución</h1>
+        <div id="seccion-registro">
+            <p>Registra tus datos para pedir tu gas rápido.</p>
+            <input type="text" id="nombre" placeholder="Nombre completo">
+            <input type="tel" id="telefono" placeholder="Número de celular">
+            <input type="text" id="direccion" placeholder="Dirección de entrega">
+            <button class="btn-registro" id="guardar-datos">REGISTRARME</button>
+        </div>
+        <div id="seccion-pedido" class="hidden">
+            <div id="mensaje-bienvenida" class="user-info"></div>
+            <button class="btn-gas" id="pedir">PEDIR GAS<br>🔥</button>
+            <p><small><a href="#" id="cambiar-datos" style="color: #d32f2f;">Cambiar mis datos</a></small></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDWGkvNQHt7URcoP2risWMBfYtdV1Un7Sk",
+            authDomain: "gassolucion.firebaseapp.com",
+            projectId: "gassolucion",
+            storageBucket: "gassolucion.firebasestorage.app",
+            messagingSenderId: "948928136223",
+            appId: "1:948928136223:web:06bb3d6bf8054c1be0c12a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const divRegistro = document.getElementById('seccion-registro');
+        const divPedido = document.getElementById('seccion-pedido');
+        const bienvenida = document.getElementById('mensaje-bienvenida');
+
+        function verificarUsuario() {
+            const usuarioGuardado = localStorage.getItem('usuarioGas');
+            if (usuarioGuardado) {
+                const user = JSON.parse(usuarioGuardado);
+                divRegistro.classList.add('hidden');
+                divPedido.classList.remove('hidden');
+                bienvenida.innerHTML = `Cliente: <b>${user.nombre}</b><br>📍 ${user.direccion}`;
+            } else {
+                divRegistro.classList.remove('hidden');
+                divPedido.classList.add('hidden');
+            }
+        }
+
+        document.getElementById('guardar-datos').onclick = () => {
+            const nombre = document.getElementById('nombre').value;
+            const tlf = document.getElementById('telefono').value;
+            const dir = document.getElementById('direccion').value;
+            if(nombre && tlf && dir) {
+                localStorage.setItem('usuarioGas', JSON.stringify({ nombre, tlf, direccion: dir }));
+                verificarUsuario();
+            } else { alert("Llena todos los campos"); }
+        };
+
+        document.getElementById('pedir').onclick = async () => {
+            const user = JSON.parse(localStorage.getItem('usuarioGas'));
+            try {
+                await addDoc(collection(db, "pedidos"), {
+                    nombre: user.nombre, tlf: user.tlf, direccion: user.direccion,
+                    fecha: new Date().toLocaleString(), estado: "pendiente"
+                });
+                alert("✅ ¡Pedido enviado con éxito!");
+            } catch (e) { alert("Error: " + e.message); }
+        };
+
+        document.getElementById('cambiar-datos').onclick = () => {
+            localStorage.removeItem('usuarioGas');
+            verificarUsuario();
+        };
+
+        verificarUsuario();
+    </script>
+</body>
+</html>
