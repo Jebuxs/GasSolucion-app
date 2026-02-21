@@ -18,29 +18,37 @@
             <button onclick="cerrarSesion()" class="bg-white/10 p-2 px-4 rounded-2xl text-slate-300 font-black text-[10px] uppercase border border-white/5">Salir</button>
         </div>
 
-        <div class="bg-slate-900/50 p-5 rounded-3xl border border-white/5 mb-8">
-            <p class="text-[10px] font-black text-green-500 uppercase mb-4 tracking-widest">Ajuste de Precios Actuales</p>
+        <div class="bg-slate-900/50 p-5 rounded-3xl border border-white/5 mb-8 relative">
+            <div class="flex justify-between items-center mb-4">
+                <p class="text-[10px] font-black text-green-500 uppercase tracking-widest">Precios de Venta</p>
+                <button id="btn-edit-precios" onclick="toggleEdicionPrecios()" class="text-[10px] bg-white/5 px-3 py-1 rounded-lg font-bold border border-white/10 hover:bg-white/20">
+                    ✏️ EDITAR
+                </button>
+            </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="text-[9px] font-bold text-slate-500 uppercase">Doméstico ($)</label>
-                    <input type="number" id="p-edit-dom" onchange="actualizarPrecios()" step="0.01" class="w-full bg-transparent text-2xl font-black text-white outline-none border-b-2 border-slate-700 focus:border-green-500 transition-colors">
+                    <input type="number" id="p-edit-dom" disabled step="0.01" class="w-full bg-transparent text-2xl font-black text-white outline-none border-b-2 border-transparent transition-all">
                 </div>
                 <div>
                     <label class="text-[9px] font-bold text-slate-500 uppercase">Industrial ($)</label>
-                    <input type="number" id="p-edit-ind" onchange="actualizarPrecios()" step="0.01" class="w-full bg-transparent text-2xl font-black text-white outline-none border-b-2 border-slate-700 focus:border-green-500 transition-colors">
+                    <input type="number" id="p-edit-ind" disabled step="0.01" class="w-full bg-transparent text-2xl font-black text-white outline-none border-b-2 border-transparent transition-all">
                 </div>
             </div>
+            <button id="btn-save-precios" onclick="guardarPrecios()" class="hidden w-full mt-4 bg-green-600 text-white p-2 rounded-xl font-black text-[10px] uppercase">Guardar Cambios</button>
         </div>
 
-        <h3 class="font-black text-slate-400 text-xs uppercase mb-4 tracking-widest px-2">Pedidos en tu Zona</h3>
-        <div id="p-lista" class="space-y-4 pb-10">
-            </div>
+        <div id="contenedor-principal">
+            <h3 id="titulo-seccion" class="font-black text-slate-400 text-xs uppercase mb-4 tracking-widest px-2">Pedidos Disponibles</h3>
+            <div id="p-lista" class="space-y-4 pb-10">
+                </div>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, onSnapshot, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDWGkvNQHt7URcoP2risWMBfYtdV1Un7Sk",
@@ -55,17 +63,16 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        let editando = false;
+
         onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                window.location.href = "index.html";
-            } else {
+            if (!user) window.location.href = "index.html";
+            else {
                 const snap = await getDoc(doc(db, "usuarios", user.uid));
                 if (snap.exists() && snap.data().rol === 'proveedor') {
                     setupUI(snap.data());
                     escucharPedidos();
-                } else {
-                    window.location.href = "index.html";
-                }
+                } else window.location.href = "index.html";
             }
         });
 
@@ -76,43 +83,76 @@
             document.getElementById('p-edit-ind').value = data.precioIndustrial || 15.00;
         }
 
-        window.actualizarPrecios = async () => {
+        window.toggleEdicionPrecios = () => {
+            editando = !editando;
+            const inputs = [document.getElementById('p-edit-dom'), document.getElementById('p-edit-ind')];
+            const btnSave = document.getElementById('btn-save-precios');
+            const btnEdit = document.getElementById('btn-edit-precios');
+
+            inputs.forEach(i => {
+                i.disabled = !editando;
+                i.style.borderBottomColor = editando ? "#22c55e" : "transparent";
+            });
+            btnSave.classList.toggle('hidden', !editando);
+            btnEdit.innerText = editando ? "CANCELAR" : "✏️ EDITAR";
+        };
+
+        window.guardarPrecios = async () => {
             await updateDoc(doc(db, "usuarios", auth.currentUser.uid), {
                 precioDomestico: document.getElementById('p-edit-dom').value,
                 precioIndustrial: document.getElementById('p-edit-ind').value
             });
-            // Feedback visual rápido
-            console.log("Precios actualizados en la nube");
+            toggleEdicionPrecios();
+            alert("Precios actualizados");
         };
 
         function escucharPedidos() {
-            const q = query(collection(db, "pedidos"), where("estado", "==", "pendiente"), orderBy("fecha", "desc"));
-            onSnapshot(q, snap => {
+            // Buscamos si el proveedor YA tiene un pedido aceptado por él
+            const qAceptado = query(collection(db, "pedidos"), where("idProveedor", "==", auth.currentUser.uid), where("estado", "==", "aceptado"));
+            
+            onSnapshot(qAceptado, snapAceptado => {
                 const lista = document.getElementById('p-lista');
-                lista.innerHTML = snap.empty ? '<p class="text-center text-slate-500 py-20 italic text-sm">No hay pedidos pendientes...</p>' : "";
-                
-                snap.forEach(d => {
+                const titulo = document.getElementById('titulo-seccion');
+
+                if (!snapAceptado.empty) {
+                    // MODO ENFOQUE: Tiene un pedido en curso
+                    titulo.innerText = "ORDEN EN CURSO";
+                    const d = snapAceptado.docs[0];
                     const p = d.data();
-                    let itemsTxt = p.items.map(i => `<span class="bg-white/5 px-3 py-1 rounded-lg border border-white/5 text-xs"><b>${i.n}</b> ${i.t} (${i.c})</span>`).join(' ');
-                    
-                    lista.innerHTML += `
-                        <div class="bg-slate-700/30 border border-white/5 p-6 rounded-[2rem] shadow-xl">
-                            <div class="flex justify-between items-start mb-4">
-                                <div>
-                                    <p class="text-[9px] font-black text-green-400 uppercase tracking-widest mb-1">💸 Propina: $${p.propina}</p>
-                                    <p class="font-bold text-white text-lg">${p.nombre}</p>
-                                </div>
-                            </div>
-                            <div class="flex flex-wrap gap-2 mb-6">
-                                ${itemsTxt}
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="aceptarPedido('${d.id}')" class="flex-1 bg-green-600 hover:bg-green-500 text-white p-4 rounded-2xl font-black text-xs uppercase transition-all shadow-lg shadow-green-900/20">Aceptar Pedido</button>
-                                <a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" class="bg-white/10 hover:bg-white/20 p-4 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center transition-all">Mapa</a>
-                            </div>
-                        </div>`;
-                });
+                    renderPedido(d.id, p, true);
+                } else {
+                    // MODO LISTA: Buscar pedidos pendientes globales
+                    titulo.innerText = "PEDIDOS DISPONIBLES";
+                    const qPendientes = query(collection(db, "pedidos"), where("estado", "==", "pendiente"), orderBy("fecha", "desc"));
+                    onSnapshot(qPendientes, snap => {
+                        lista.innerHTML = snap.empty ? '<p class="text-center text-slate-500 py-20 italic">No hay pedidos...</p>' : "";
+                        snap.forEach(d => renderPedido(d.id, d.data(), false));
+                    });
+                }
             });
+        }
+
+        function renderPedido(id, p, esEnfoque) {
+            const lista = document.getElementById('p-lista');
+            if (esEnfoque) lista.innerHTML = ""; // Limpiar para enfoque
+
+            let itemsTxt = p.items.map(i => `<div class="bg-white/5 p-2 rounded-xl border border-white/5 text-sm"><b>${i.n}</b> ${i.t} <span class="text-slate-400">(${i.c})</span></div>`).join('');
+            
+            const card = `
+                <div class="bg-slate-700/30 border-2 ${esEnfoque ? 'border-green-500' : 'border-white/5'} p-6 rounded-[2.5rem] shadow-xl">
+                    <p class="text-[9px] font-black text-green-400 uppercase tracking-widest mb-1">💰 Propina: $${p.propina}</p>
+                    <p class="font-bold text-white text-xl mb-4">${p.nombre}</p>
+                    <div class="grid grid-cols-1 gap-2 mb-6">${itemsTxt}</div>
+                    <div class="flex flex-col gap-2">
+                        ${esEnfoque ? 
+                            `<button onclick="finalizarVenta('${id}')" class="w-full bg-green-600 text-white p-5 rounded-2xl font-black text-sm uppercase shadow-lg">Completar Entrega</button>` : 
+                            `<button onclick="aceptarPedido('${id}')" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black text-sm uppercase">Aceptar Pedido</button>`
+                        }
+                        <a href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" class="w-full bg-white/10 p-4 rounded-2xl font-black text-[10px] uppercase text-center">Ver en Google Maps</a>
+                    </div>
+                </div>`;
+            
+            lista.innerHTML += card;
         }
 
         window.aceptarPedido = async (id) => {
@@ -120,7 +160,13 @@
                 estado: 'aceptado', 
                 idProveedor: auth.currentUser.uid 
             });
-            alert("¡Pedido aceptado! Ve al mapa para llegar.");
+        };
+
+        window.finalizarVenta = async (id) => {
+            if(confirm("¿Confirmas que el gas fue entregado y cobrado?")) {
+                await deleteDoc(doc(db, "pedidos", id));
+                alert("¡Venta finalizada!");
+            }
         };
 
         window.cerrarSesion = () => signOut(auth).then(() => window.location.href = "index.html");
