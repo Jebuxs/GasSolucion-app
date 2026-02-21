@@ -8,143 +8,115 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        #map { height: 280px; border-radius: 24px; margin-bottom: 16px; border: 2px solid #fee2e2; z-index: 1; }
+        #map { height: 250px; border-radius: 24px; margin-bottom: 16px; border: 2px solid #fee2e2; z-index: 1; }
         .view { display: none; }
         .view.active { display: block; }
+        .input-mix { @apply bg-slate-50 border-none rounded-xl p-2 w-20 text-center font-bold outline-none focus:ring-2 ring-red-500 disabled:opacity-30; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen p-4 font-sans text-slate-900">
 
-    <div id="app" class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-100 min-h-[620px] relative overflow-hidden">
+    <div id="app" class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-100 min-h-[650px] relative">
         
         <div id="view-loading" class="view active py-32 text-center">
             <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-red-600 border-r-4 border-transparent mx-auto"></div>
-            <p class="mt-6 text-slate-400 font-black uppercase text-[10px] tracking-[0.2em]">Sincronizando GasSolución...</p>
+            <p class="mt-6 text-slate-400 font-black uppercase text-[10px] tracking-widest">Sincronizando GasSolución...</p>
         </div>
 
         <div id="view-login" class="view text-center py-12">
-            <div class="mb-8">
-                <span class="bg-red-100 text-red-600 px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest">Ecuador</span>
-                <h1 class="text-5xl font-black text-slate-900 mt-4 tracking-tighter">Gas<span class="text-red-600">Solución</span></h1>
-                <p class="text-slate-400 font-medium mt-2">Tu energía, sin complicaciones.</p>
-            </div>
-            <button id="btn-login" class="w-full bg-slate-900 text-white p-5 rounded-3xl flex items-center justify-center gap-4 font-bold shadow-xl active:scale-95 transition-all">
+            <h1 class="text-5xl font-black text-slate-900 mt-4 tracking-tighter">Gas<span class="text-red-600">Solución</span></h1>
+            <button id="btn-login" class="w-full mt-10 bg-slate-900 text-white p-5 rounded-3xl flex items-center justify-center gap-4 font-bold shadow-xl">
                 <img src="https://www.google.com/favicon.ico" class="w-6 h-6 brightness-200"> Iniciar con Google
             </button>
         </div>
 
         <div id="view-role" class="view text-center">
-            <h2 class="text-3xl font-black text-slate-900 mb-2 tracking-tighter">Bienvenido</h2>
-            <p class="text-slate-400 mb-10 font-medium">¿Cómo deseas usar la plataforma hoy?</p>
+            <h2 class="text-3xl font-black mb-10">¿Quién eres?</h2>
             <div class="grid gap-4">
-                <button onclick="registrarRol('cliente')" class="group w-full bg-white border-2 border-slate-100 hover:border-red-500 p-8 rounded-[2rem] transition-all text-left shadow-sm">
-                    <span class="text-4xl block mb-2">🏠</span>
-                    <span class="font-black text-xl text-slate-900 block uppercase">Soy Cliente</span>
-                    <span class="text-sm text-slate-400 font-medium italic">Necesito gas en mi domicilio</span>
+                <button onclick="registrarRol('cliente')" class="w-full bg-white border-2 p-8 rounded-[2rem] text-left">
+                    <span class="font-black text-xl block">🏠 SOY CLIENTE</span>
                 </button>
-                <button onclick="registrarRol('proveedor')" class="group w-full bg-white border-2 border-slate-100 hover:border-slate-900 p-8 rounded-[2rem] transition-all text-left shadow-sm">
-                    <span class="text-4xl block mb-2">🚛</span>
-                    <span class="font-black text-xl text-slate-900 block uppercase">Soy Proveedor</span>
-                    <span class="text-sm text-slate-400 font-medium italic">Soy repartidor autorizado</span>
+                <button onclick="registrarRol('proveedor')" class="w-full bg-white border-2 p-8 rounded-[2rem] text-left">
+                    <span class="font-black text-xl block text-red-600">🚛 SOY PROVEEDOR</span>
                 </button>
             </div>
         </div>
 
         <div id="view-cliente" class="view">
-            <div class="flex justify-between items-center mb-6">
-                <div class="flex items-center gap-3">
-                    <img id="c-photo" class="w-12 h-12 rounded-2xl border-2 border-red-500 object-cover shadow-md">
-                    <div>
-                        <p id="c-name" class="font-black text-slate-900 leading-none"></p>
-                        <p id="c-id" class="text-[9px] text-slate-400 font-bold tracking-tighter mt-1 uppercase"></p>
-                    </div>
-                </div>
-                <button onclick="cerrarSesion()" class="bg-slate-100 hover:bg-red-50 p-2 px-4 rounded-2xl text-slate-500 font-black text-[10px] uppercase transition-colors">Salir</button>
+            <div class="flex justify-between items-center mb-4">
+                <img id="c-photo" class="w-10 h-10 rounded-full border-2 border-red-500 shadow-md">
+                <button onclick="cerrarSesion()" class="bg-slate-100 p-2 px-4 rounded-2xl text-slate-500 font-black text-[10px] uppercase">Salir</button>
             </div>
 
             <div id="map"></div>
             
-            <div class="grid grid-cols-2 gap-3 mb-4">
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 ml-2 uppercase">Tipo de Gas</label>
-                    <select id="f-tipo" class="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-red-500 transition-all">
-                        <option value="domestico">🏠 Doméstico</option>
-                        <option value="industrial">🏭 Industrial</option>
+            <div class="space-y-3 mb-6 bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Configura tu Pedido</p>
+                
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="check-dom" onchange="toggleInputs('dom')" class="w-5 h-5 accent-red-600">
+                    <span class="text-sm font-bold flex-1">GAS DOMÉSTICO</span>
+                    <select id="color-dom" disabled class="bg-white rounded-lg p-1 text-xs font-bold outline-none">
+                        <option>Amarillo</option><option>Azul</option><option>Naranja</option>
                     </select>
+                    <input type="number" id="cant-dom" disabled value="1" min="1" class="input-mix">
                 </div>
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 ml-2 uppercase">Marca / Color</label>
-                    <select id="f-color" class="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 ring-red-500 transition-all">
-                        <option value="amarillo">🟡 Amarillo</option>
-                        <option value="azul">🔵 Azul</option>
-                        <option value="naranja">🟠 Naranja</option>
+
+                <hr class="border-slate-200">
+
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="check-ind" onchange="toggleInputs('ind')" class="w-5 h-5 accent-red-600">
+                    <span class="text-sm font-bold flex-1">GAS INDUSTRIAL</span>
+                    <select id="color-ind" disabled class="bg-white rounded-lg p-1 text-xs font-bold outline-none">
+                        <option>Amarillo</option><option>Azul</option><option>Naranja</option>
                     </select>
+                    <input type="number" id="cant-ind" disabled value="1" min="1" class="input-mix">
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3 mb-6">
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 ml-2 uppercase">Cantidad</label>
-                    <input type="number" id="f-cant" value="1" min="1" class="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-center outline-none focus:ring-2 ring-red-500">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-orange-500 ml-2 uppercase">Propina sugerida</label>
-                    <input type="number" id="f-propina" placeholder="$ 0.00" class="w-full p-4 bg-orange-50 text-orange-600 border border-orange-100 rounded-2xl font-bold outline-none focus:ring-2 ring-orange-500">
-                </div>
+            <div class="mb-6">
+                <label class="text-[9px] font-black text-orange-500 uppercase ml-2">Propina Sugerida</label>
+                <input type="number" id="f-propina" placeholder="$ 0.00" class="w-full p-4 bg-orange-50 text-orange-600 border border-orange-100 rounded-2xl font-bold outline-none focus:ring-2 ring-orange-500">
             </div>
 
-            <button id="btn-pedir" class="w-full bg-red-600 text-white p-6 rounded-[1.8rem] font-black text-xl shadow-2xl shadow-red-200 active:scale-95 transition-all mb-8 uppercase tracking-tighter">
+            <button id="btn-accion-principal" class="w-full p-6 rounded-[1.8rem] font-black text-xl shadow-2xl transition-all uppercase tracking-tighter">
                 Pedir Gas Ahora
             </button>
 
-            <h3 class="font-black text-slate-900 text-xs uppercase mb-4 tracking-widest flex items-center gap-2">
-                <span class="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span> Mis Pedidos
-            </h3>
-            <div id="c-historial" class="space-y-3 pb-6"></div>
+            <div id="c-historial" class="mt-6 space-y-3"></div>
         </div>
 
         <div id="view-proveedor" class="view">
-            <div id="p-config" class="hidden animate-in fade-in zoom-in duration-300">
-                <h2 class="text-3xl font-black mb-2 tracking-tighter">Configuración</h2>
-                <p class="text-slate-400 mb-8 font-medium">Establece tus precios de venta para hoy.</p>
-                <div class="space-y-4 mb-8">
-                    <div class="p-4 bg-slate-50 rounded-3xl border border-slate-100">
-                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Precio Gas Doméstico</label>
-                        <input type="number" id="p-dom" step="0.01" placeholder="Ej: 3.00" class="w-full bg-transparent p-2 text-2xl font-black text-slate-900 outline-none">
+            <div class="bg-slate-900 text-white p-6 rounded-[2rem] mb-6 shadow-2xl">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p id="pr-name" class="font-black text-xl"></p>
+                        <p id="pr-id" class="text-[9px] text-slate-400 font-bold uppercase"></p>
                     </div>
-                    <div class="p-4 bg-slate-50 rounded-3xl border border-slate-100">
-                        <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Precio Gas Industrial</label>
-                        <input type="number" id="p-ind" step="0.01" placeholder="Ej: 15.00" class="w-full bg-transparent p-2 text-2xl font-black text-slate-900 outline-none">
-                    </div>
-                </div>
-                <button onclick="guardarPrecios()" class="w-full bg-slate-900 text-white p-6 rounded-[2rem] font-black text-lg shadow-xl shadow-slate-200">ACTIVAR MI CAMIÓN</button>
-            </div>
-
-            <div id="p-main" class="hidden">
-                <div class="bg-slate-900 text-white p-6 rounded-[2rem] mb-6 flex justify-between items-center shadow-2xl relative overflow-hidden">
-                    <div class="relative z-10">
-                        <p id="pr-name" class="font-black text-xl leading-none"></p>
-                        <p id="pr-id" class="text-[9px] text-slate-400 font-bold tracking-widest mt-2 uppercase"></p>
-                    </div>
-                    <button onclick="cerrarSesion()" class="relative z-10 bg-white/10 hover:bg-white/20 p-2 px-4 rounded-xl text-[10px] font-black uppercase transition-all">Salir</button>
-                    <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-green-500/20 rounded-full blur-3xl"></div>
+                    <button onclick="cerrarSesion()" class="bg-white/10 p-2 px-4 rounded-xl text-[10px] font-black uppercase">Salir</button>
                 </div>
                 
-                <h3 class="font-black text-slate-900 text-xs uppercase mb-4 tracking-widest flex items-center gap-2">
-                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Pedidos Disponibles
-                </h3>
-                <div id="p-lista" class="space-y-4 pb-6 text-center">
-                     <p class="text-slate-300 py-10 italic font-medium">Buscando pedidos cerca...</p>
+                <div class="mt-6 grid grid-cols-2 gap-2">
+                    <div class="bg-white/5 p-3 rounded-2xl border border-white/10">
+                        <label class="text-[8px] font-bold text-slate-400 uppercase">Doméstico ($)</label>
+                        <input type="number" id="edit-dom" onchange="actualizarPreciosBase()" step="0.01" class="w-full bg-transparent text-lg font-black text-green-400 outline-none">
+                    </div>
+                    <div class="bg-white/5 p-3 rounded-2xl border border-white/10">
+                        <label class="text-[8px] font-bold text-slate-400 uppercase">Industrial ($)</label>
+                        <input type="number" id="edit-ind" onchange="actualizarPreciosBase()" step="0.01" class="w-full bg-transparent text-lg font-black text-green-400 outline-none">
+                    </div>
                 </div>
             </div>
+            
+            <h3 class="font-black text-slate-900 text-xs uppercase mb-4 tracking-widest px-2">Pedidos Disponibles</h3>
+            <div id="p-lista" class="space-y-4"></div>
         </div>
-
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, collection, query, where, onSnapshot, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDWGkvNQHt7URcoP2risWMBfYtdV1Un7Sk",
@@ -160,50 +132,37 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        let map, marker, userGlobal;
+        let map, marker, userGlobal, pedidoActivoID = null;
 
-        // FILTRO DE SEGURIDAD
+        // AUTH Y FILTRO DE ROLES
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 userGlobal = user;
                 const snap = await getDoc(doc(db, "usuarios", user.uid));
                 if (snap.exists()) {
                     const data = snap.data();
-                    if (data.rol === 'cliente') initCliente(data);
-                    else initProveedor(data);
-                } else {
-                    showView('view-role');
-                }
-            } else {
-                showView('view-login');
-            }
+                    data.rol === 'cliente' ? initCliente(data) : initProveedor(data);
+                } else { showView('view-role'); }
+            } else { showView('view-login'); }
         });
 
+        // FUNCIONES UI
         function showView(id) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
 
-        window.registrarRol = async (rol) => {
-            const appID = (rol === 'cliente' ? 'CLN-' : 'PRV-') + Math.floor(1000 + Math.random() * 9000);
-            await setDoc(doc(db, "usuarios", userGlobal.uid), {
-                nombre: userGlobal.displayName,
-                email: userGlobal.email,
-                foto: userGlobal.photoURL,
-                rol: rol,
-                appID: appID,
-                fechaRegistro: new Date().toISOString()
-            });
-            location.reload();
+        window.toggleInputs = (tipo) => {
+            const isChecked = document.getElementById(`check-${tipo}`).checked;
+            document.getElementById(`color-${tipo}`).disabled = !isChecked;
+            document.getElementById(`cant-${tipo}`).disabled = !isChecked;
         };
 
-        // CLIENTE
+        // LÓGICA CLIENTE
         function initCliente(data) {
             showView('view-cliente');
-            document.getElementById('c-name').innerText = data.nombre;
-            document.getElementById('c-id').innerText = data.appID;
             document.getElementById('c-photo').src = data.foto;
-
+            
             navigator.geolocation.getCurrentPosition(pos => {
                 const { latitude: lat, longitude: lng } = pos.coords;
                 if (!map) {
@@ -213,104 +172,105 @@
                 }
             });
 
-            const q = query(collection(db, "pedidos"), where("clienteID", "==", data.appID), orderBy("fecha", "desc"));
+            // Monitor de pedido activo
+            const q = query(collection(db, "pedidos"), where("uidCliente", "==", auth.currentUser.uid), where("estado", "in", ["pendiente", "aceptado"]));
             onSnapshot(q, snap => {
-                const h = document.getElementById('c-historial');
-                h.innerHTML = "";
-                snap.forEach(d => {
-                    const p = d.data();
-                    h.innerHTML += `
-                        <div class="bg-white border border-slate-100 p-5 rounded-3xl relative shadow-sm overflow-hidden">
-                            <div class="absolute top-0 left-0 w-1.5 h-full bg-red-600"></div>
-                            <p class="font-black text-slate-900 text-sm uppercase">${p.cantidad} ${p.color} - ${p.tipo}</p>
-                            <div class="flex justify-between items-center mt-2">
-                                <span class="text-[9px] font-black px-3 py-1 bg-slate-100 rounded-full uppercase text-slate-500">${p.estado}</span>
-                                ${p.precioFinal ? `<span class="text-xs font-black text-green-600">$${p.precioFinal}</span>` : ''}
-                            </div>
-                        </div>`;
-                });
+                const btn = document.getElementById('btn-accion-principal');
+                if (!snap.empty) {
+                    const ped = snap.docs[0];
+                    pedidoActivoID = ped.id;
+                    btn.innerText = "CANCELAR COMPRA";
+                    btn.className = "w-full p-6 rounded-[1.8rem] font-black text-xl bg-slate-900 text-white shadow-xl";
+                    btn.onclick = () => cancelarPedido(ped.id);
+                } else {
+                    pedidoActivoID = null;
+                    btn.innerText = "PEDIR GAS AHORA";
+                    btn.className = "w-full p-6 rounded-[1.8rem] font-black text-xl bg-red-600 text-white shadow-red-200 shadow-2xl";
+                    btn.onclick = enviarPedido;
+                }
             });
         }
 
-        document.getElementById('btn-pedir').onclick = async function() {
-            const btn = this;
-            btn.disabled = true;
-            btn.innerText = "Sincronizando...";
-            const pos = marker.getLatLng();
-            try {
-                await addDoc(collection(db, "pedidos"), {
-                    clienteID: document.getElementById('c-id').innerText,
-                    tipo: document.getElementById('f-tipo').value,
-                    color: document.getElementById('f-color').value,
-                    cantidad: document.getElementById('f-cant').value,
-                    propina: document.getElementById('f-propina').value || 0,
-                    lat: pos.lat, lng: pos.lng,
-                    estado: 'pendiente',
-                    fecha: new Date().toISOString()
-                });
-                alert("🚀 ¡Pedido enviado con éxito!");
-            } catch(e) { alert("Error al pedir"); }
-            setTimeout(() => { btn.disabled = false; btn.innerText = "Pedir Gas Ahora"; }, 3000);
-        };
+        async function enviarPedido() {
+            const hasDom = document.getElementById('check-dom').checked;
+            const hasInd = document.getElementById('check-ind').checked;
+            if (!hasDom && !hasInd) return alert("Selecciona al menos un tipo de gas");
 
-        // PROVEEDOR
-        function initProveedor(data) {
-            showView('view-proveedor');
-            if (!data.precioDomestico) {
-                document.getElementById('p-config').classList.remove('hidden');
-                document.getElementById('p-main').classList.add('hidden');
-            } else {
-                document.getElementById('p-main').classList.remove('hidden');
-                document.getElementById('p-config').classList.add('hidden');
-                document.getElementById('pr-name').innerText = data.nombre;
-                document.getElementById('pr-id').innerText = data.appID;
-                escucharPedidos(data);
+            const pos = marker.getLatLng();
+            const pedido = {
+                uidCliente: auth.currentUser.uid,
+                idPublico: document.getElementById('u-id')?.innerText || "CLI-001",
+                items: [],
+                propina: document.getElementById('f-propina').value || 0,
+                lat: pos.lat, lng: pos.lng,
+                estado: 'pendiente',
+                fecha: new Date().toISOString()
+            };
+
+            if (hasDom) pedido.items.push({ tipo: 'domestico', color: document.getElementById('color-dom').value, cant: document.getElementById('cant-dom').value });
+            if (hasInd) pedido.items.push({ tipo: 'industrial', color: document.getElementById('color-ind').value, cant: document.getElementById('cant-ind').value });
+
+            await addDoc(collection(db, "pedidos"), pedido);
+            alert("✅ ¡Buscando proveedores!");
+        }
+
+        async function cancelarPedido(id) {
+            if (confirm("¿Seguro que quieres cancelar tu pedido?")) {
+                await deleteDoc(doc(db, "pedidos", id));
+                alert("Pedido cancelado.");
             }
         }
 
-        window.guardarPrecios = async () => {
-            const d = document.getElementById('p-dom').value;
-            const i = document.getElementById('p-ind').value;
-            if(!d || !i) return alert("Ingresa tus precios base");
-            await updateDoc(doc(db, "usuarios", userGlobal.uid), { precioDomestico: d, precioIndustrial: i });
-            location.reload();
-        };
+        // LÓGICA PROVEEDOR
+        function initProveedor(data) {
+            showView('view-proveedor');
+            document.getElementById('pr-name').innerText = data.nombre;
+            document.getElementById('pr-id').innerText = data.appID;
+            document.getElementById('edit-dom').value = data.precioDomestico || 0;
+            document.getElementById('edit-ind').value = data.precioIndustrial || 0;
 
-        function escucharPedidos(prov) {
             const q = query(collection(db, "pedidos"), where("estado", "==", "pendiente"), orderBy("fecha", "desc"));
             onSnapshot(q, snap => {
                 const l = document.getElementById('p-lista');
-                l.innerHTML = snap.empty ? '<p class="text-slate-300 py-10 italic">No hay pedidos cerca...</p>' : "";
+                l.innerHTML = snap.empty ? '<p class="text-center text-slate-300 py-10 italic">Sin pedidos...</p>' : "";
                 snap.forEach(d => {
                     const p = d.data();
-                    const sug = p.tipo === 'domestico' ? prov.precioDomestico : prov.precioIndustrial;
+                    let resumen = p.items.map(i => `${i.cant} ${i.color}`).join(' + ');
                     l.innerHTML += `
-                        <div class="bg-white border-2 border-slate-50 p-6 rounded-[2.5rem] shadow-sm text-left">
-                            <div class="flex justify-between items-start mb-4">
-                                <span class="bg-red-50 text-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase">Nuevo Pedido</span>
-                                <span class="text-xs font-black text-orange-600">+$${p.propina} Propina</span>
-                            </div>
-                            <h4 class="font-black text-2xl text-slate-900 leading-none">${p.cantidad} ${p.color.toUpperCase()}</h4>
-                            <p class="text-xs font-bold text-slate-400 mt-1 uppercase mb-6">${p.tipo}</p>
-                            <div class="flex gap-2">
-                                <button onclick="aceptarPedido('${d.id}', '${sug}')" class="flex-1 bg-green-600 text-white p-4 rounded-2xl font-black text-xs shadow-lg uppercase tracking-widest">Aceptar ($${sug})</button>
-                                <a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" class="bg-slate-100 text-slate-500 p-4 rounded-2xl font-black text-xs uppercase">Mapa</a>
+                        <div class="bg-white border-2 border-slate-50 p-6 rounded-[2.5rem] shadow-sm m-2">
+                            <p class="text-[10px] font-black text-orange-600 mb-2 uppercase">Propina: $${p.propina}</p>
+                            <h4 class="font-black text-xl text-slate-900">${resumen}</h4>
+                            <div class="flex gap-2 mt-4">
+                                <button onclick="aceptarPedido('${d.id}')" class="flex-1 bg-green-600 text-white p-4 rounded-2xl font-black text-xs uppercase">Aceptar</button>
+                                <a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" class="bg-slate-100 p-4 rounded-2xl font-black text-[10px] uppercase">Ver Mapa</a>
                             </div>
                         </div>`;
                 });
             });
         }
 
-        window.aceptarPedido = async (id, precio) => {
-            await updateDoc(doc(db, "pedidos", id), {
-                estado: 'aceptado',
-                precioFinal: precio,
-                proveedorID: document.getElementById('pr-id').innerText
-            });
-            alert("✅ Pedido aceptado. ¡Ve por ello!");
+        window.actualizarPreciosBase = async () => {
+            const d = document.getElementById('edit-dom').value;
+            const i = document.getElementById('edit-ind').value;
+            await updateDoc(doc(db, "usuarios", auth.currentUser.uid), { precioDomestico: d, precioIndustrial: i });
+            alert("Precios actualizados");
         };
 
-        // AUTH
+        window.aceptarPedido = async (id) => {
+            await updateDoc(doc(db, "pedidos", id), { estado: 'aceptado', idProveedor: auth.currentUser.uid });
+            alert("¡Pedido aceptado!");
+        };
+
+        // REGISTRO Y CIERRE
+        window.registrarRol = async (rol) => {
+            const appID = (rol === 'cliente' ? 'CLN-' : 'PRV-') + Math.floor(1000 + Math.random() * 9000);
+            await setDoc(doc(db, "usuarios", userGlobal.uid), {
+                nombre: userGlobal.displayName, foto: userGlobal.photoURL,
+                rol: rol, appID: appID, precioDomestico: 3.00, precioIndustrial: 15.00
+            });
+            location.reload();
+        };
+
         document.getElementById('btn-login').onclick = () => signInWithPopup(auth, provider);
         window.cerrarSesion = () => signOut(auth).then(() => location.reload());
     </script>
