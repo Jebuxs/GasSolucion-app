@@ -145,38 +145,57 @@
             });
         }
 
-        async function realizarPedido() {
-            const pos = marker.getLatLng();
-            const pedido = {
-                uidC: auth.currentUser.uid,
-                nombre: userGlobal.displayName,
-                items: [],
-                propina: document.getElementById('f-propina').value || 0,
-                lat: pos.lat, lng: pos.lng,
-                estado: 'pendiente',
-                fecha: new Date().toISOString()
-            };
-
-            // Recolectar cantidades
-            const roles = ['cd', 'ci'];
-            const tipos = ['Doméstico', 'Industrial'];
-            const colores = ['Amarillo', 'Azul', 'Naranja'];
-            const ids = ['ama', 'azu', 'nar'];
-
-            roles.forEach((r, idxT) => {
-                ids.forEach((id, idxC) => {
-                    const cant = document.getElementById(`${r}-${id}`).value;
-                    if (cant > 0 && document.getElementById(`check-${r === 'cd' ? 'dom' : 'ind'}`).checked) {
-                        pedido.items.push({ t: tipos[idxT], c: colores[idxC], n: cant });
-                    }
-                });
-            });
-
-            if (pedido.items.length === 0) return alert("Indica cuántos tanques necesitas");
+    async function realizarPedido() {
+        const pos = marker.getLatLng();
+        
+        // 1. OBTENER DIRECCIÓN AUTOMÁTICA (Reverse Geocoding)
+        let direccionCalle = "Buscando dirección...";
+        try {
+            // Usamos la API de Nominatim para sacar el nombre de las calles
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${pos.lat}&lon=${pos.lng}`);
+            const data = await response.json();
             
-            await addDoc(collection(db, "pedidos"), pedido);
-            alert("🚀 Pedido enviado con éxito");
+            // Extraemos una dirección corta (Calle y número o intersección)
+            const partes = data.display_name.split(',');
+            direccionCalle = partes[0] + (partes[1] ? " y " + partes[1] : "");
+        } catch (error) {
+            console.error("Error obteniendo dirección:", error);
+            direccionCalle = "Dirección no disponible";
         }
+
+        const pedido = {
+            uidC: auth.currentUser.uid,
+            nombre: userGlobal.displayName, // Aquí enviamos el nombre real de Google
+            items: [],
+            propina: document.getElementById('f-propina').value || 0,
+            lat: pos.lat,
+            lng: pos.lng,
+            direccion: direccionCalle, // Guardamos la calle real encontrada
+            sector: "Llano Chico", // Puedes dejarlo fijo o sacarlo de 'data.address.suburb'
+            estado: "pendiente",
+            fecha: new Date().toISOString()
+        };
+
+        // Recolectar cantidades (Esta parte se mantiene igual a tu lógica)
+        const roles = ['cd', 'ci'];
+        const tipos = ['Doméstico', 'Industrial'];
+        const colores = ['Amarillo', 'Azul', 'Naranja'];
+        const ids = ['ama', 'azu', 'nar'];
+
+        roles.forEach((r, idxT) => {
+            ids.forEach((id, idxC) => {
+                const cant = document.getElementById(`${r}-${id}`).value;
+                if (cant > 0 && document.getElementById(`check-${r}`).checked) {
+                    pedido.items.push({ t: tipos[idxT], c: colores[idxC], n: cant });
+                }
+            });
+        });
+
+        if (pedido.items.length === 0) return alert("Indica cuántos tanques necesitas");
+
+        await addDoc(collection(db, "pedidos"), pedido);
+        alert("🚀 Pedido enviado con éxito");
+    }
 
         async function cancelarPedido(id) {
             if (confirm("¿Seguro que quieres cancelar el pedido?")) {
