@@ -134,7 +134,7 @@
                 const btn = document.getElementById('btn-main');
                 if (!snap.empty) {
                     const ped = snap.docs[0];
-                    btn.innerText = "CANCELAR MI PEDIDO";
+                    btn.innerText = "ANULAR MI PEDIDO";
                     btn.className = "w-full p-6 rounded-[2rem] font-black text-xl bg-slate-900 text-white shadow-xl";
                     btn.onclick = () => cancelarPedido(ped.id);
                 } else {
