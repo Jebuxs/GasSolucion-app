@@ -123,7 +123,7 @@
                 } else {
                     // MODO LISTA: Buscar pedidos pendientes globales
                     titulo.innerText = "PEDIDOS DISPONIBLES";
-                    const qPendientes = query(collection(db, "pedidos"), where("estado", "==", "pendiente"), orderBy("fecha", "desc"));
+                    const qPendientes = query(collection(db, "pedidos"), where("estado", "==", "pendiente"));
                     onSnapshot(qPendientes, snap => {
                         lista.innerHTML = snap.empty ? '<p class="text-center text-slate-500 py-20 italic">No hay pedidos...</p>' : "";
                         snap.forEach(d => renderPedido(d.id, d.data(), false));
