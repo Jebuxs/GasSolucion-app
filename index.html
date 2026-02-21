@@ -1,197 +1,122 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GasSolución | Pedidos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style> #map { height: 250px; border-radius: 15px; margin-bottom: 15px; } </style>
-</head>
-<body class="bg-slate-50 min-h-screen p-4">
+<style>
+    .input-precio { @apply w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-green-400 font-bold outline-none focus:ring-2 ring-green-500; }
+</style>
 
-    <div id="app" class="max-w-md mx-auto bg-white p-6 rounded-3xl shadow-lg">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-red-600">GasSolución</h1>
-            <button onclick="cerrarSesion()" class="text-xs text-slate-400 underline">Cerrar Sesión</button>
-        </div>
-
-        <div id="view-role" class="hidden text-center">
-            <h2 class="text-xl font-semibold mb-4 text-slate-700">¿Cómo usarás la App?</h2>
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="setRole('cliente')" class="p-6 border-2 border-red-100 rounded-2xl hover:border-red-500 transition">
-                    <span class="text-4xl block mb-2">🏠</span>
-                    <span class="font-bold">Cliente</span>
-                </button>
-                <button onclick="setRole('proveedor')" class="p-6 border-2 border-red-100 rounded-2xl hover:border-red-500 transition">
-                    <span class="text-4xl block mb-2">🚛</span>
-                    <span class="font-bold">Proveedor</span>
-                </button>
+<div id="view-proveedor" class="hidden">
+    <div id="panel-config-precios" class="hidden bg-slate-900 p-6 rounded-3xl mb-4 border-2 border-green-900 shadow-2xl">
+        <h2 class="text-white font-black text-xl mb-4 uppercase tracking-tighter">⚙️ Configura tus Precios</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="text-[10px] text-slate-400 font-bold">PRECIO DOMÉSTICO ($)</label>
+                <input type="number" id="base-domestico" step="0.01" placeholder="Ej: 3.00" class="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-green-400 font-bold outline-none">
             </div>
-        </div>
-
-        <div id="view-cliente" class="hidden">
-            <div class="bg-red-50 p-3 rounded-xl mb-4 flex items-center gap-3">
-                <img id="user-photo" class="w-10 h-10 rounded-full border-2 border-white">
-                <div>
-                    <p class="text-xs text-slate-500" id="user-id"></p>
-                    <p class="font-bold text-slate-800" id="user-name"></p>
-                </div>
+            <div>
+                <label class="text-[10px] text-slate-400 font-bold">PRECIO INDUSTRIAL ($)</label>
+                <input type="number" id="base-industrial" step="0.01" placeholder="Ej: 15.00" class="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-green-400 font-bold outline-none">
             </div>
-
-            <p class="text-sm font-semibold mb-2 text-slate-600 italic">Mueve el mapa para marcar tu ubicación exacta:</p>
-            <div id="map"></div>
-
-            <div class="space-y-3">
-                <div class="grid grid-cols-2 gap-2">
-                    <select id="tipo-gas" class="w-full p-3 bg-slate-100 rounded-xl outline-none">
-                        <option value="domestico">🏠 Doméstico</option>
-                        <option value="industrial">🏭 Industrial</option>
-                    </select>
-                    <select id="color-gas" class="w-full p-3 bg-slate-100 rounded-xl outline-none">
-                        <option value="amarillo">🟡 Amarillo</option>
-                        <option value="azul">🔵 Azul</option>
-                        <option value="anaranjado">🟠 Naranja</option>
-                    </select>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="number" id="cantidad" placeholder="Cantidad" value="1" class="w-full p-3 bg-slate-100 rounded-xl outline-none">
-                    <input type="number" id="propina" placeholder="Propina ($)" class="w-full p-3 bg-slate-100 rounded-xl outline-none border-2 border-yellow-400">
-                </div>
-                <button id="btn-pedir" class="w-full bg-red-600 text-white p-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-red-700 transition">
-                    PEDIR GAS 🔥
-                </button>
-            </div>
-
-            <div class="mt-8">
-                <h3 class="font-bold text-slate-700 border-b pb-2 mb-3">Mis Pedidos Recientes</h3>
-                <div id="historial-pedidos" class="space-y-3 text-sm">
-                    </div>
-            </div>
-        </div>
-
-        <div id="view-login" class="hidden text-center py-10">
-            <button id="btn-google" class="flex items-center justify-center gap-3 bg-white border border-slate-300 p-4 rounded-xl font-semibold w-full">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="20">
-                Entrar con Google
-            </button>
+            <button onclick="guardarPrecios()" class="w-full bg-green-600 text-white p-4 rounded-2xl font-black shadow-lg">GUARDAR MI LISTA</button>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    <div id="main-proveedor" class="hidden">
+        <div class="bg-slate-900 text-white p-5 rounded-2xl mb-4 flex justify-between items-center shadow-lg border-b-4 border-green-600">
+            <div>
+                <p class="text-[10px] text-slate-400" id="prov-id"></p>
+                <p class="font-bold text-lg leading-tight" id="prov-name"></p>
+                <button onclick="editarPrecios()" class="text-[10px] text-green-500 underline uppercase font-bold">Editar Precios</button>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] text-slate-400 uppercase">Ganancias</p>
+                <p class="text-xl font-black text-green-400" id="prov-saldo">$0.00</p>
+            </div>
+        </div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDWGkvNQHt7URcoP2risWMBfYtdV1Un7Sk",
-            authDomain: "gassolucion.firebaseapp.com",
-            projectId: "gassolucion",
-            storageBucket: "gassolucion.firebasestorage.app",
-            messagingSenderId: "948928136223",
-            appId: "1:948928136223:web:06bb3d6bf8054c1be0c12a"
-        };
+        <div class="flex gap-2 mb-6">
+            <button id="btn-estado" class="flex-1 bg-green-600 text-white p-4 rounded-2xl font-black text-xs shadow-md uppercase tracking-widest">Activo</button>
+            <button onclick="cerrarSesion()" class="bg-slate-200 px-4 rounded-2xl text-slate-600">✕</button>
+        </div>
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const provider = new GoogleAuthProvider();
+        <h3 class="font-black text-slate-800 text-sm uppercase mb-4 flex items-center gap-2">
+            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Pedidos en tu zona
+        </h3>
+        <div id="lista-pedidos" class="space-y-4"></div>
+    </div>
+</div>
 
-        let map, marker, userLocation = [-0.1807, -78.4678]; // Quito por defecto
+<script type="module">
+    // ... (Firebase imports y config) ...
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const userSnap = await getDoc(doc(db, "usuarios", user.uid));
-                if (userSnap.exists()) {
-                    const data = userSnap.data();
-                    if(data.rol === 'cliente') initCliente(data);
-                    else alert("Eres Proveedor. Fase 3 próximamente.");
-                } else {
-                    window.currentUser = user;
-                    showView('view-role');
-                }
-            } else {
-                showView('view-login');
-            }
+    async function initProveedor(data) {
+        document.getElementById('view-loading').classList.add('hidden');
+        document.getElementById('view-proveedor').classList.remove('hidden');
+        
+        // Si no tiene precios, mostramos el panel de configuración
+        if (!data.precioDomestico) {
+            document.getElementById('panel-config-precios').classList.remove('hidden');
+        } else {
+            document.getElementById('main-proveedor').classList.remove('hidden');
+            mostrarPedidos(data);
+        }
+
+        document.getElementById('prov-name').innerText = data.nombre;
+        document.getElementById('prov-id').innerText = data.appID;
+    }
+
+    window.guardarPrecios = async () => {
+        const d = document.getElementById('base-domestico').value;
+        const i = document.getElementById('base-industrial').value;
+        
+        if(!d || !i) return alert("Pon tus precios para continuar");
+
+        await updateDoc(doc(db, "usuarios", auth.currentUser.uid), {
+            precioDomestico: d,
+            precioIndustrial: i
         });
+        location.reload(); // Recargamos para que entre al panel principal
+    };
 
-        function initCliente(data) {
-            showView('view-cliente');
-            document.getElementById('user-name').innerText = data.nombre;
-            document.getElementById('user-id').innerText = data.appID;
-            document.getElementById('user-photo').src = data.foto;
-            
-            // Iniciar Mapa
-            map = L.map('map').setView(userLocation, 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            marker = L.marker(userLocation, {draggable: true}).addTo(map);
-
-            // Intentar GPS real
-            navigator.geolocation.getCurrentPosition(pos => {
-                const latlng = [pos.coords.latitude, pos.coords.longitude];
-                map.setView(latlng, 16);
-                marker.setLatLng(latlng);
+    function mostrarPedidos(provData) {
+        const q = query(collection(db, "pedidos"), where("estado", "==", "pendiente"), orderBy("fecha", "desc"));
+        onSnapshot(q, (snapshot) => {
+            const lista = document.getElementById('lista-pedidos');
+            lista.innerHTML = "";
+            snapshot.forEach(docSnap => {
+                const p = docSnap.data();
+                const precioSugerido = p.tipo === 'domestico' ? provData.precioDomestico : provData.precioIndustrial;
+                
+                lista.innerHTML += `
+                    <div class="bg-white border-2 border-slate-100 p-5 rounded-3xl shadow-sm">
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm uppercase">Nuevo</span>
+                            <span class="text-xs font-black text-orange-600">Propina: $${p.propina}</span>
+                        </div>
+                        <p class="font-black text-xl text-slate-800 leading-tight">${p.cantidad} TANQUES ${p.color.toUpperCase()}</p>
+                        <p class="text-xs font-bold text-slate-400 mb-4 uppercase">${p.tipo}</p>
+                        
+                        <div class="flex gap-2">
+                            <button onclick="aceptarConPrecioBase('${docSnap.id}', '${precioSugerido}')" 
+                                class="flex-1 bg-green-600 text-white p-4 rounded-xl font-black text-xs shadow-md">
+                                ACEPTAR POR $${precioSugerido}
+                            </button>
+                            <button onclick="contraoferta('${docSnap.id}')" 
+                                class="bg-slate-900 text-white p-4 rounded-xl font-black text-[10px]">
+                                OTRA OFERTA
+                            </button>
+                        </div>
+                    </div>`;
             });
+        });
+    }
 
-            cargarHistorial(data.appID);
-        }
-
-        document.getElementById('btn-pedir').onclick = async () => {
-            const user = JSON.parse(localStorage.getItem('gs_user')) || {appID: document.getElementById('user-id').innerText};
-            const pos = marker.getLatLng();
-            
-            await addDoc(collection(db, "pedidos"), {
-                clienteID: user.appID,
-                clienteNombre: document.getElementById('user-name').innerText,
-                tipo: document.getElementById('tipo-gas').value,
-                color: document.getElementById('color-gas').value,
-                cantidad: document.getElementById('cantidad').value,
-                propina: document.getElementById('propina').value || 0,
-                lat: pos.lat,
-                lng: pos.lng,
-                fecha: new Date().toISOString(),
-                estado: 'pendiente'
-            });
-            alert("✅ Pedido enviado. ¡Buscando camiones!");
-        };
-
-        function cargarHistorial(appID) {
-            const q = query(collection(db, "pedidos"), where("clienteID", "==", appID), orderBy("fecha", "desc"));
-            onSnapshot(q, (snapshot) => {
-                const h = document.getElementById('historial-pedidos');
-                h.innerHTML = "";
-                snapshot.forEach(doc => {
-                    const p = doc.data();
-                    h.innerHTML += `
-                        <div class="bg-white border p-3 rounded-xl shadow-sm">
-                            <div class="flex justify-between">
-                                <span class="font-bold uppercase">${p.color} - ${p.tipo}</span>
-                                <span class="text-blue-600 font-bold">$${p.propina} Propina</span>
-                            </div>
-                            <p class="text-xs text-slate-400 mt-1">${new Date(p.fecha).toLocaleString()}</p>
-                            <span class="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full mt-2 inline-block">${p.estado}</span>
-                        </div>`;
-                });
-            });
-        }
-
-        // Utilidades
-        window.setRole = async (rol) => {
-            const user = window.currentUser;
-            const customID = (rol === 'cliente' ? 'CLN-' : 'PRV-') + Math.floor(1000 + Math.random()*9000);
-            const data = { uid: user.uid, nombre: user.displayName, email: user.email, foto: user.photoURL, rol: rol, appID: customID, fechaRegistro: new Date().toISOString() };
-            await setDoc(doc(db, "usuarios", user.uid), data);
-            location.reload();
-        };
-
-        window.cerrarSesion = () => signOut(auth).then(() => location.reload());
-        function showView(id) {
-            ['view-login', 'view-role', 'view-cliente'].forEach(v => document.getElementById(v)?.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-        }
-
-        document.getElementById('btn-google').onclick = () => signInWithPopup(auth, provider);
-    </script>
-</body>
-</html>
+    window.aceptarConPrecioBase = async (id, precio) => {
+        await updateDoc(doc(db, "pedidos", id), {
+            estado: 'aceptado',
+            precioFinal: precio,
+            proveedorID: document.getElementById('prov-id').innerText,
+            fechaAceptado: new Date().toISOString()
+        });
+        alert("¡Pedido aceptado con tu precio base!");
+    };
+    
+    // ... (Otras funciones de navegación y cerrar sesión) ...
+</script>
