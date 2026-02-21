@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GasSolución | Cliente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 250px; border-radius: 24px; margin-bottom: 16px; border: 2px solid #fee2e2; z-index: 1; }
+        .input-cant { @apply bg-white border border-slate-200 rounded-lg p-1 w-14 text-center font-black text-slate-800 outline-none focus:ring-2 ring-red-500; }
+        .card-seccion { @apply bg-slate-50 p-4 rounded-3xl border border-slate-100 mb-4 transition-all; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 font-sans text-slate-900">
+
+    <div id="app" class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-100 min-h-[700px] relative">
+        
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-3">
+                <img id="u-photo" class="w-12 h-12 rounded-2xl border-2 border-red-500 object-cover shadow-sm" src="" alt="">
+                <div>
+                    <p id="u-name" class="font-black text-slate-900 leading-none text-sm">Cargando...</p>
+                    <p id="u-id" class="text-[9px] text-slate-400 font-bold uppercase mt-1 tracking-widest"></p>
+                </div>
+            </div>
+            <button onclick="cerrarSesion()" class="bg-slate-100 p-2 px-4 rounded-2xl text-slate-500 font-black text-[10px] uppercase hover:bg-red-50 hover:text-red-600 transition-colors">Salir</button>
+        </div>
+
+        <div id="map"></div>
+        
+        <div class="space-y-4 mb-6">
+            
+            <div class="card-seccion">
+                <div class="flex items-center gap-2 mb-3">
+                    <input type="checkbox" id="check-dom" onchange="togglePanel('dom')" class="w-5 h-5 accent-red-600">
+                    <label class="font-black text-sm text-slate-800 uppercase">🏠 Gas Doméstico</label>
+                </div>
+                <div id="panel-dom" class="hidden pl-7 space-y-2">
+                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🟡 Amarillo</span><input type="number" id="cd-ama" value="0" min="0" class="input-cant"></div>
+                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🔵 Azul</span><input type="number" id="cd-azu" value="0" min="0" class="input-cant"></div>
+                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🟠 Naranja</span><input type="number" id="cd-nar" value="0" min="0" class="input-cant"></div>
+                </div>
+            </div>
+
+            <div class="card-seccion">
+                <div class="flex items-center gap-2 mb-3">
+                    <input type="checkbox" id="check-ind" onchange="togglePanel('ind')" class="w-5 h-5 accent-red-600">
+                    <label class="font-black text-sm text-slate-800 uppercase">🏭 Gas Industrial</label>
+                </div>
+                <div id="panel-ind" class="hidden pl-7 space-y-2">
+                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🟡 Amarillo</span><input type="number" id="ci-ama" value="0" min="0" class="input-cant"></div>
+                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🔵 Azul</span><input type="number" id="ci-azu" value="0" min="0" class="input-cant"></div>
+                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🟠 Naranja</span><input type="number" id="ci-nar" value="0" min="0" class="input-cant"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6 px-2">
+            <label class="text-[10px] font-black text-orange-500 uppercase tracking-widest">Propina para el Chofer ($)</label>
+            <input type="number" id="f-propina" placeholder="0.00" class="w-full mt-1 p-4 bg-orange-50 text-orange-600 border border-orange-100 rounded-2xl font-black outline-none focus:ring-2 ring-orange-500">
+        </div>
+
+        <button id="btn-main" class="w-full p-6 rounded-[2rem] font-black text-xl shadow-2xl transition-all uppercase tracking-tighter">
+            Pedir Gas Ahora
+        </button>
+
+        <div id="historial" class="mt-8 space-y-3 pb-10"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, addDoc, query, where, onSnapshot, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDWGkvNQHt7URcoP2risWMBfYtdV1Un7Sk",
+            authDomain: "gassolucion.firebaseapp.com",
+            projectId: "gassolucion",
+            storageBucket: "gassolucion.firebasestorage.app",
+            messagingSenderId: "948928136223",
+            appId: "1:948928136223:web:06bb3d6bf8054c1be0c12a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let map, marker, userGlobal;
+
+        // PROTECCIÓN DE RUTA
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = "index.html";
+            } else {
+                userGlobal = user;
+                const snap = await getDoc(doc(db, "usuarios", user.uid));
+                if (snap.exists() && snap.data().rol === 'cliente') {
+                    setupUI(snap.data());
+                    initMap();
+                    escucharPedidos();
+                } else {
+                    window.location.href = "index.html";
+                }
+            }
+        });
+
+        function setupUI(data) {
+            document.getElementById('u-name').innerText = data.nombre;
+            document.getElementById('u-id').innerText = data.appID;
+            document.getElementById('u-photo').src = data.foto;
+        }
+
+        function initMap() {
+            navigator.geolocation.getCurrentPosition(pos => {
+                const { latitude: lat, longitude: lng } = pos.coords;
+                if (!map) {
+                    map = L.map('map').setView([lat, lng], 17);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                    marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                }
+            });
+        }
+
+        window.togglePanel = (tipo) => {
+            const isChecked = document.getElementById(`check-${tipo}`).checked;
+            document.getElementById(`panel-${tipo}`).classList.toggle('hidden', !isChecked);
+        };
+
+        function escucharPedidos() {
+            const q = query(collection(db, "pedidos"), where("uidC", "==", auth.currentUser.uid), where("estado", "in", ["pendiente", "aceptado"]));
+            onSnapshot(q, snap => {
+                const btn = document.getElementById('btn-main');
+                if (!snap.empty) {
+                    const ped = snap.docs[0];
+                    btn.innerText = "CANCELAR MI PEDIDO";
+                    btn.className = "w-full p-6 rounded-[2rem] font-black text-xl bg-slate-900 text-white shadow-xl";
+                    btn.onclick = () => cancelarPedido(ped.id);
+                } else {
+                    btn.innerText = "PEDIR GAS AHORA";
+                    btn.className = "w-full p-6 rounded-[2rem] font-black text-xl bg-red-600 text-white shadow-red-200 shadow-2xl";
+                    btn.onclick = realizarPedido;
+                }
+            });
+        }
+
+        async function realizarPedido() {
+            const pos = marker.getLatLng();
+            const pedido = {
+                uidC: auth.currentUser.uid,
+                nombre: userGlobal.displayName,
+                items: [],
+                propina: document.getElementById('f-propina').value || 0,
+                lat: pos.lat, lng: pos.lng,
+                estado: 'pendiente',
+                fecha: new Date().toISOString()
+            };
+
+            // Recolectar cantidades
+            const roles = ['cd', 'ci'];
+            const tipos = ['Doméstico', 'Industrial'];
+            const colores = ['Amarillo', 'Azul', 'Naranja'];
+            const ids = ['ama', 'azu', 'nar'];
+
+            roles.forEach((r, idxT) => {
+                ids.forEach((id, idxC) => {
+                    const cant = document.getElementById(`${r}-${id}`).value;
+                    if (cant > 0 && document.getElementById(`check-${r === 'cd' ? 'dom' : 'ind'}`).checked) {
+                        pedido.items.push({ t: tipos[idxT], c: colores[idxC], n: cant });
+                    }
+                });
+            });
+
+            if (pedido.items.length === 0) return alert("Indica cuántos tanques necesitas");
+            
+            await addDoc(collection(db, "pedidos"), pedido);
+            alert("🚀 Pedido enviado con éxito");
+        }
+
+        async function cancelarPedido(id) {
+            if (confirm("¿Seguro que quieres cancelar el pedido?")) {
+                await deleteDoc(doc(db, "pedidos", id));
+            }
+        }
+
+        window.cerrarSesion = () => signOut(auth).then(() => window.location.href = "index.html");
+    </script>
+</body>
+</html>
