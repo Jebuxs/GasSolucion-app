@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GasSolución | Proveedor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 min-h-screen p-4 font-sans text-white">
+
+    <div id="app" class="max-w-md mx-auto bg-slate-800 p-6 rounded-[2.5rem] shadow-2xl border border-slate-700 min-h-[700px] relative">
+        
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <p id="p-name" class="font-black text-2xl tracking-tighter text-white">Cargando...</p>
+                <p id="p-id" class="text-[10px] text-slate-400 font-bold uppercase tracking-widest"></p>
+            </div>
+            <button onclick="cerrarSesion()" class="bg-white/10 p-2 px-4 rounded-2xl text-slate-300 font-black text-[10px] uppercase border border-white/5">Salir</button>
+        </div>
+
+        <div class="bg-slate-900/50 p-5 rounded-3xl border border-white/5 mb-8">
+            <p class="text-[10px] font-black text-green-500 uppercase mb-4 tracking-widest">Ajuste de Precios Actuales</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase">Doméstico ($)</label>
+                    <input type="number" id="p-edit-dom" onchange="actualizarPrecios()" step="0.01" class="w-full bg-transparent text-2xl font-black text-white outline-none border-b-2 border-slate-700 focus:border-green-500 transition-colors">
+                </div>
+                <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase">Industrial ($)</label>
+                    <input type="number" id="p-edit-ind" onchange="actualizarPrecios()" step="0.01" class="w-full bg-transparent text-2xl font-black text-white outline-none border-b-2 border-slate-700 focus:border-green-500 transition-colors">
+                </div>
+            </div>
+        </div>
+
+        <h3 class="font-black text-slate-400 text-xs uppercase mb-4 tracking-widest px-2">Pedidos en tu Zona</h3>
+        <div id="p-lista" class="space-y-4 pb-10">
+            </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDWGkvNQHt7URcoP2risWMBfYtdV1Un7Sk",
+            authDomain: "gassolucion.firebaseapp.com",
+            projectId: "gassolucion",
+            storageBucket: "gassolucion.firebasestorage.app",
+            messagingSenderId: "948928136223",
+            appId: "1:948928136223:web:06bb3d6bf8054c1be0c12a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = "index.html";
+            } else {
+                const snap = await getDoc(doc(db, "usuarios", user.uid));
+                if (snap.exists() && snap.data().rol === 'proveedor') {
+                    setupUI(snap.data());
+                    escucharPedidos();
+                } else {
+                    window.location.href = "index.html";
+                }
+            }
+        });
+
+        function setupUI(data) {
+            document.getElementById('p-name').innerText = data.nombre;
+            document.getElementById('p-id').innerText = data.appID;
+            document.getElementById('p-edit-dom').value = data.precioDomestico || 3.00;
+            document.getElementById('p-edit-ind').value = data.precioIndustrial || 15.00;
+        }
+
+        window.actualizarPrecios = async () => {
+            await updateDoc(doc(db, "usuarios", auth.currentUser.uid), {
+                precioDomestico: document.getElementById('p-edit-dom').value,
+                precioIndustrial: document.getElementById('p-edit-ind').value
+            });
+            // Feedback visual rápido
+            console.log("Precios actualizados en la nube");
+        };
+
+        function escucharPedidos() {
+            const q = query(collection(db, "pedidos"), where("estado", "==", "pendiente"), orderBy("fecha", "desc"));
+            onSnapshot(q, snap => {
+                const lista = document.getElementById('p-lista');
+                lista.innerHTML = snap.empty ? '<p class="text-center text-slate-500 py-20 italic text-sm">No hay pedidos pendientes...</p>' : "";
+                
+                snap.forEach(d => {
+                    const p = d.data();
+                    let itemsTxt = p.items.map(i => `<span class="bg-white/5 px-3 py-1 rounded-lg border border-white/5 text-xs"><b>${i.n}</b> ${i.t} (${i.c})</span>`).join(' ');
+                    
+                    lista.innerHTML += `
+                        <div class="bg-slate-700/30 border border-white/5 p-6 rounded-[2rem] shadow-xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <p class="text-[9px] font-black text-green-400 uppercase tracking-widest mb-1">💸 Propina: $${p.propina}</p>
+                                    <p class="font-bold text-white text-lg">${p.nombre}</p>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                ${itemsTxt}
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="aceptarPedido('${d.id}')" class="flex-1 bg-green-600 hover:bg-green-500 text-white p-4 rounded-2xl font-black text-xs uppercase transition-all shadow-lg shadow-green-900/20">Aceptar Pedido</button>
+                                <a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" class="bg-white/10 hover:bg-white/20 p-4 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center transition-all">Mapa</a>
+                            </div>
+                        </div>`;
+                });
+            });
+        }
+
+        window.aceptarPedido = async (id) => {
+            await updateDoc(doc(db, "pedidos", id), { 
+                estado: 'aceptado', 
+                idProveedor: auth.currentUser.uid 
+            });
+            alert("¡Pedido aceptado! Ve al mapa para llegar.");
+        };
+
+        window.cerrarSesion = () => signOut(auth).then(() => window.location.href = "index.html");
+    </script>
+</body>
+</html>
