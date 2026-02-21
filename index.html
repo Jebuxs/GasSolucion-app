@@ -3,26 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GasSolución | Bienvenida</title>
+    <title>GasSolución | Acceso</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
-    <div id="app" class="max-w-md w-full bg-white p-8 rounded-[2.5rem] shadow-2xl text-center">
-        <h1 class="text-5xl font-black text-slate-900 tracking-tighter">Gas<span class="text-red-600">Solución</span></h1>
-        <p class="text-slate-400 mt-2 font-medium">Inicia sesión para continuar</p>
-        
-        <div id="loading" class="mt-10">
-            <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-red-600 mx-auto"></div>
+
+    <div id="app" class="max-w-md w-full bg-white p-10 rounded-[2.5rem] shadow-2xl text-center">
+        <h1 class="text-5xl font-black text-slate-900 tracking-tighter mb-2">Gas<span class="text-red-600">Solución</span></h1>
+        <p id="status-text" class="text-slate-400 font-medium">Verificando sesión...</p>
+
+        <div id="loader" class="mt-8">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-red-600 border-r-4 border-transparent mx-auto"></div>
         </div>
 
-        <button id="btn-login" class="hidden w-full mt-10 bg-slate-900 text-white p-5 rounded-3xl flex items-center justify-center gap-4 font-bold shadow-xl active:scale-95 transition-all">
+        <button id="btn-login" class="hidden w-full mt-8 bg-slate-900 text-white p-5 rounded-3xl flex items-center justify-center gap-4 font-bold shadow-xl active:scale-95 transition-all">
             <img src="https://www.google.com/favicon.ico" class="w-6 h-6 brightness-200"> Entrar con Google
         </button>
 
-        <div id="role-selection" class="hidden mt-10 space-y-4">
-            <h2 class="text-xl font-black">¿Cómo usarás la app?</h2>
-            <button onclick="registrarRol('cliente')" class="w-full bg-white border-2 p-6 rounded-2xl font-bold text-left hover:border-red-500">🏠 Soy Cliente</button>
-            <button onclick="registrarRol('proveedor')" class="w-full bg-white border-2 p-6 rounded-2xl font-bold text-left hover:border-slate-900 text-red-600">🚛 Soy Proveedor</button>
+        <div id="role-selection" class="hidden mt-8 space-y-4">
+            <h2 class="text-xl font-black text-slate-800">¿Cómo usarás la app hoy?</h2>
+            <button onclick="definirRol('cliente')" class="w-full bg-white border-2 border-slate-100 p-6 rounded-2xl font-bold text-left hover:border-red-500 transition-all shadow-sm">
+                <span class="block text-2xl mb-1">🏠</span>
+                <span class="block uppercase tracking-tight">Soy Cliente</span>
+            </button>
+            <button onclick="definirRol('proveedor')" class="w-full bg-white border-2 border-slate-100 p-6 rounded-2xl font-bold text-left hover:border-slate-900 transition-all shadow-sm">
+                <span class="block text-2xl mb-1 text-red-600">🚛</span>
+                <span class="block uppercase tracking-tight text-red-600">Soy Proveedor</span>
+            </button>
         </div>
     </div>
 
@@ -47,30 +54,51 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                document.getElementById('status-text').innerText = "Identificando perfil...";
                 const snap = await getDoc(doc(db, "usuarios", user.uid));
+                
                 if (snap.exists()) {
                     const rol = snap.data().rol;
-                    // REDIRECCIÓN SEGÚN ROL
-                    window.location.href = rol + ".html"; 
+                    // REDIRECCIÓN DINÁMICA: Te manda a cliente.html o proveedor.html
+                    window.location.href = rol + ".html";
                 } else {
-                    document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('role-selection').classList.remove('hidden');
+                    mostrarSeleccionRol();
                 }
             } else {
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('btn-login').classList.remove('hidden');
+                mostrarLogin();
             }
         });
 
+        function mostrarLogin() {
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('status-text').innerText = "Inicia sesión para continuar";
+            document.getElementById('btn-login').classList.remove('hidden');
+        }
+
+        function mostrarSeleccionRol() {
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('btn-login').classList.add('hidden');
+            document.getElementById('status-text').classList.add('hidden');
+            document.getElementById('role-selection').classList.remove('hidden');
+        }
+
         document.getElementById('btn-login').onclick = () => signInWithPopup(auth, provider);
 
-        window.registrarRol = async (rol) => {
+        window.definirRol = async (rol) => {
             const user = auth.currentUser;
             const appID = (rol === 'cliente' ? 'CLN-' : 'PRV-') + Math.floor(1000 + Math.random() * 9000);
+            
             await setDoc(doc(db, "usuarios", user.uid), {
-                nombre: user.displayName, foto: user.photoURL, email: user.email,
-                rol: rol, appID: appID, fecha: new Date().toISOString()
+                nombre: user.displayName,
+                foto: user.photoURL,
+                email: user.email,
+                rol: rol,
+                appID: appID,
+                precioDomestico: 3.00,
+                precioIndustrial: 15.00,
+                creado: new Date().toISOString()
             });
+            
             window.location.href = rol + ".html";
         };
     </script>
