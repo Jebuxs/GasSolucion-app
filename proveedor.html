@@ -48,7 +48,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, onSnapshot, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, collection, query, where, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDWGkvNQHt7URcoP2risWMBfYtdV1Un7Sk",
@@ -62,7 +62,6 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
         let editando = false;
 
         onAuthStateChanged(auth, async (user) => {
@@ -88,7 +87,6 @@
             const inputs = [document.getElementById('p-edit-dom'), document.getElementById('p-edit-ind')];
             const btnSave = document.getElementById('btn-save-precios');
             const btnEdit = document.getElementById('btn-edit-precios');
-
             inputs.forEach(i => {
                 i.disabled = !editando;
                 i.style.borderBottomColor = editando ? "#22c55e" : "transparent";
@@ -100,76 +98,4 @@
         window.guardarPrecios = async () => {
             await updateDoc(doc(db, "usuarios", auth.currentUser.uid), {
                 precioDomestico: document.getElementById('p-edit-dom').value,
-                precioIndustrial: document.getElementById('p-edit-ind').value
-            });
-            toggleEdicionPrecios();
-            alert("Precios actualizados");
-        };
-
-        function escucharPedidos() {
-            // Buscamos si el proveedor YA tiene un pedido aceptado por él
-            const qAceptado = query(collection(db, "pedidos"), where("idProveedor", "==", auth.currentUser.uid), where("estado", "==", "aceptado"));
-            
-            onSnapshot(qAceptado, snapAceptado => {
-                const lista = document.getElementById('p-lista');
-                const titulo = document.getElementById('titulo-seccion');
-
-                if (!snapAceptado.empty) {
-                    // MODO ENFOQUE: Tiene un pedido en curso
-                    titulo.innerText = "ORDEN EN CURSO";
-                    const d = snapAceptado.docs[0];
-                    const p = d.data();
-                    renderPedido(d.id, p, true);
-                } else {
-                    // MODO LISTA: Buscar pedidos pendientes globales
-                    titulo.innerText = "PEDIDOS DISPONIBLES";
-                    const qPendientes = query(collection(db, "pedidos"), where("estado", "==", "pendiente"));
-                    onSnapshot(qPendientes, snap => {
-                        lista.innerHTML = snap.empty ? '<p class="text-center text-slate-500 py-20 italic">No hay pedidos...</p>' : "";
-                        snap.forEach(d => renderPedido(d.id, d.data(), false));
-                    });
-                }
-            });
-        }
-
-        function renderPedido(id, p, esEnfoque) {
-            const lista = document.getElementById('p-lista');
-            if (esEnfoque) lista.innerHTML = ""; // Limpiar para enfoque
-
-            let itemsTxt = p.items.map(i => `<div class="bg-white/5 p-2 rounded-xl border border-white/5 text-sm"><b>${i.n}</b> ${i.t} <span class="text-slate-400">(${i.c})</span></div>`).join('');
-            
-            const card = `
-                <div class="bg-slate-700/30 border-2 ${esEnfoque ? 'border-green-500' : 'border-white/5'} p-6 rounded-[2.5rem] shadow-xl">
-                    <p class="text-[9px] font-black text-green-400 uppercase tracking-widest mb-1">💰 Propina: $${p.propina}</p>
-                    <p class="font-bold text-white text-xl mb-4">${p.nombre}</p>
-                    <div class="grid grid-cols-1 gap-2 mb-6">${itemsTxt}</div>
-                    <div class="flex flex-col gap-2">
-                        ${esEnfoque ? 
-                            `<button onclick="finalizarVenta('${id}')" class="w-full bg-green-600 text-white p-5 rounded-2xl font-black text-sm uppercase shadow-lg">Completar Entrega</button>` : 
-                            `<button onclick="aceptarPedido('${id}')" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black text-sm uppercase">Aceptar Pedido</button>`
-                        }
-                        <a href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" class="w-full bg-white/10 p-4 rounded-2xl font-black text-[10px] uppercase text-center">Ver en Google Maps</a>
-                    </div>
-                </div>`;
-            
-            lista.innerHTML += card;
-        }
-
-        window.aceptarPedido = async (id) => {
-            await updateDoc(doc(db, "pedidos", id), { 
-                estado: 'aceptado', 
-                idProveedor: auth.currentUser.uid 
-            });
-        };
-
-        window.finalizarVenta = async (id) => {
-            if(confirm("¿Confirmas que el gas fue entregado y cobrado?")) {
-                await deleteDoc(doc(db, "pedidos", id));
-                alert("¡Venta finalizada!");
-            }
-        };
-
-        window.cerrarSesion = () => signOut(auth).then(() => window.location.href = "index.html");
-    </script>
-</body>
-</html>
+                precioIndustrial: document.getElementById('p-
