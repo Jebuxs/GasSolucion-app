@@ -1,122 +1,283 @@
-<style>
-    .input-precio { @apply w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-green-400 font-bold outline-none focus:ring-2 ring-green-500; }
-</style>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GasSolución | App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 280px; border-radius: 20px; margin-bottom: 15px; border: 2px solid #fee2e2; }
+        .view { display: none; }
+        .view.active { display: block; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 font-sans">
 
-<div id="view-proveedor" class="hidden">
-    <div id="panel-config-precios" class="hidden bg-slate-900 p-6 rounded-3xl mb-4 border-2 border-green-900 shadow-2xl">
-        <h2 class="text-white font-black text-xl mb-4 uppercase tracking-tighter">⚙️ Configura tus Precios</h2>
-        <div class="space-y-4">
-            <div>
-                <label class="text-[10px] text-slate-400 font-bold">PRECIO DOMÉSTICO ($)</label>
-                <input type="number" id="base-domestico" step="0.01" placeholder="Ej: 3.00" class="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-green-400 font-bold outline-none">
-            </div>
-            <div>
-                <label class="text-[10px] text-slate-400 font-bold">PRECIO INDUSTRIAL ($)</label>
-                <input type="number" id="base-industrial" step="0.01" placeholder="Ej: 15.00" class="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-green-400 font-bold outline-none">
-            </div>
-            <button onclick="guardarPrecios()" class="w-full bg-green-600 text-white p-4 rounded-2xl font-black shadow-lg">GUARDAR MI LISTA</button>
-        </div>
-    </div>
-
-    <div id="main-proveedor" class="hidden">
-        <div class="bg-slate-900 text-white p-5 rounded-2xl mb-4 flex justify-between items-center shadow-lg border-b-4 border-green-600">
-            <div>
-                <p class="text-[10px] text-slate-400" id="prov-id"></p>
-                <p class="font-bold text-lg leading-tight" id="prov-name"></p>
-                <button onclick="editarPrecios()" class="text-[10px] text-green-500 underline uppercase font-bold">Editar Precios</button>
-            </div>
-            <div class="text-right">
-                <p class="text-[10px] text-slate-400 uppercase">Ganancias</p>
-                <p class="text-xl font-black text-green-400" id="prov-saldo">$0.00</p>
-            </div>
-        </div>
-
-        <div class="flex gap-2 mb-6">
-            <button id="btn-estado" class="flex-1 bg-green-600 text-white p-4 rounded-2xl font-black text-xs shadow-md uppercase tracking-widest">Activo</button>
-            <button onclick="cerrarSesion()" class="bg-slate-200 px-4 rounded-2xl text-slate-600">✕</button>
-        </div>
-
-        <h3 class="font-black text-slate-800 text-sm uppercase mb-4 flex items-center gap-2">
-            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Pedidos en tu zona
-        </h3>
-        <div id="lista-pedidos" class="space-y-4"></div>
-    </div>
-</div>
-
-<script type="module">
-    // ... (Firebase imports y config) ...
-
-    async function initProveedor(data) {
-        document.getElementById('view-loading').classList.add('hidden');
-        document.getElementById('view-proveedor').classList.remove('hidden');
+    <div id="app" class="max-w-md mx-auto bg-white p-6 rounded-3xl shadow-xl border border-slate-100 min-h-[600px] relative">
         
-        // Si no tiene precios, mostramos el panel de configuración
-        if (!data.precioDomestico) {
-            document.getElementById('panel-config-precios').classList.remove('hidden');
-        } else {
-            document.getElementById('main-proveedor').classList.remove('hidden');
-            mostrarPedidos(data);
+        <div id="view-loading" class="view active py-20 text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+            <p class="mt-4 text-slate-400 font-bold uppercase text-xs tracking-widest">Cargando GasSolución...</p>
+        </div>
+
+        <div id="view-login" class="view text-center py-10">
+            <h1 class="text-4xl font-black text-red-600 mb-2">GasSolución</h1>
+            <p class="text-slate-400 mb-8">El gas de tu hogar a un clic</p>
+            <button id="btn-login" class="w-full bg-white border-2 border-slate-200 p-4 rounded-2xl flex items-center justify-center gap-3 font-bold shadow-sm active:scale-95 transition-all">
+                <img src="https://www.google.com/favicon.ico" class="w-5"> Entrar con Google
+            </button>
+        </div>
+
+        <div id="view-role" class="view text-center">
+            <h2 class="text-2xl font-black text-slate-800 mb-6">¿Cómo usarás la app?</h2>
+            <div class="space-y-4">
+                <button onclick="registrarRol('cliente')" class="w-full bg-red-600 text-white p-6 rounded-3xl shadow-lg">
+                    <span class="block text-2xl">🏠</span>
+                    <span class="font-black text-lg">SOY CLIENTE</span>
+                    <span class="block text-xs opacity-80">Quiero pedir gas para mi hogar</span>
+                </button>
+                <button onclick="registrarRol('proveedor')" class="w-full bg-slate-900 text-white p-6 rounded-3xl shadow-lg">
+                    <span class="block text-2xl">🚛</span>
+                    <span class="font-black text-lg">SOY PROVEEDOR</span>
+                    <span class="block text-xs opacity-80">Soy repartidor de cilindros</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="view-cliente" class="view">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-3">
+                    <img id="u-photo" class="w-10 h-10 rounded-full border-2 border-red-500">
+                    <div>
+                        <p id="u-id" class="text-[8px] text-slate-400 font-bold"></p>
+                        <p id="u-name" class="font-black text-slate-800 text-sm"></p>
+                    </div>
+                </div>
+                <button onclick="cerrarSesion()" class="text-[10px] bg-slate-100 px-3 py-1 rounded-full text-slate-500 font-bold uppercase">Salir</button>
+            </div>
+
+            <div id="map"></div>
+            
+            <div class="grid grid-cols-2 gap-2 mb-4">
+                <select id="c-tipo" class="p-3 bg-slate-100 rounded-xl font-bold text-sm outline-none border-none">
+                    <option value="domestico">🏠 Doméstico</option>
+                    <option value="industrial">🏭 Industrial</option>
+                </select>
+                <select id="c-color" class="p-3 bg-slate-100 rounded-xl font-bold text-sm outline-none border-none">
+                    <option value="amarillo">🟡 Amarillo</option>
+                    <option value="azul">🔵 Azul</option>
+                    <option value="naranja">🟠 Naranja</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mb-4">
+                <input type="number" id="c-cant" value="1" min="1" class="p-3 bg-slate-100 rounded-xl font-bold text-center">
+                <input type="number" id="c-propina" placeholder="Propina $" class="p-3 bg-orange-50 text-orange-600 rounded-xl font-bold border border-orange-200">
+            </div>
+
+            <button id="btn-pedir" class="w-full bg-red-600 text-white p-5 rounded-2xl font-black text-xl shadow-red-200 shadow-xl active:scale-95 transition-all mb-6">
+                PEDIR GAS AHORA
+            </button>
+
+            <h3 class="font-black text-slate-400 text-[10px] uppercase mb-3 tracking-widest">Mis Pedidos Recientes</h3>
+            <div id="c-historial" class="space-y-3"></div>
+        </div>
+
+        <div id="view-proveedor" class="view">
+            <div id="p-config" class="hidden">
+                <h2 class="text-xl font-black mb-4">Configura tus Precios</h2>
+                <div class="space-y-3 mb-4">
+                    <input type="number" id="p-base-dom" placeholder="Precio Doméstico (Ej: 3.00)" class="w-full p-4 bg-slate-100 rounded-xl font-bold">
+                    <input type="number" id="p-base-ind" placeholder="Precio Industrial (Ej: 15.00)" class="w-full p-4 bg-slate-100 rounded-xl font-bold">
+                </div>
+                <button onclick="guardarPrecios()" class="w-full bg-green-600 text-white p-4 rounded-xl font-black">GUARDAR Y EMPEZAR</button>
+            </div>
+
+            <div id="p-main" class="hidden">
+                <div class="bg-slate-900 text-white p-5 rounded-2xl mb-4 flex justify-between items-center shadow-lg border-b-4 border-green-600">
+                    <div>
+                        <p id="pr-id" class="text-[8px] text-slate-400 font-bold"></p>
+                        <p id="pr-name" class="font-black text-lg leading-tight"></p>
+                        <button onclick="location.reload()" class="text-[9px] text-green-500 font-bold uppercase">Actualizar</button>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[9px] text-slate-400 uppercase">Estado</p>
+                        <p class="text-sm font-black text-green-400 uppercase">Activo</p>
+                    </div>
+                </div>
+                <button onclick="cerrarSesion()" class="w-full mb-4 text-[10px] text-slate-400 uppercase font-bold tracking-widest">Cerrar Sesión</button>
+                
+                <h3 class="font-black text-slate-800 text-sm uppercase mb-4">Pedidos en tu Zona</h3>
+                <div id="p-lista" class="space-y-4"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDWGkvNQHt7URcoP2risWMBfYtdV1Un7Sk",
+            authDomain: "gassolucion.firebaseapp.com",
+            projectId: "gassolucion",
+            storageBucket: "gassolucion.firebasestorage.app",
+            messagingSenderId: "948928136223",
+            appId: "1:948928136223:web:06bb3d6bf8054c1be0c12a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let map, marker, userGlobal;
+
+        // --- FILTRO DE SEGURIDAD (ON AUTH STATE) ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userGlobal = user;
+                const snap = await getDoc(doc(db, "usuarios", user.uid));
+                if (snap.exists()) {
+                    const data = snap.data();
+                    if (data.rol === 'cliente') initCliente(data);
+                    else initProveedor(data);
+                } else {
+                    showView('view-role');
+                }
+            } else {
+                showView('view-login');
+            }
+        });
+
+        // --- FUNCIONES CORE ---
+        function showView(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
         }
 
-        document.getElementById('prov-name').innerText = data.nombre;
-        document.getElementById('prov-id').innerText = data.appID;
-    }
-
-    window.guardarPrecios = async () => {
-        const d = document.getElementById('base-domestico').value;
-        const i = document.getElementById('base-industrial').value;
-        
-        if(!d || !i) return alert("Pon tus precios para continuar");
-
-        await updateDoc(doc(db, "usuarios", auth.currentUser.uid), {
-            precioDomestico: d,
-            precioIndustrial: i
-        });
-        location.reload(); // Recargamos para que entre al panel principal
-    };
-
-    function mostrarPedidos(provData) {
-        const q = query(collection(db, "pedidos"), where("estado", "==", "pendiente"), orderBy("fecha", "desc"));
-        onSnapshot(q, (snapshot) => {
-            const lista = document.getElementById('lista-pedidos');
-            lista.innerHTML = "";
-            snapshot.forEach(docSnap => {
-                const p = docSnap.data();
-                const precioSugerido = p.tipo === 'domestico' ? provData.precioDomestico : provData.precioIndustrial;
-                
-                lista.innerHTML += `
-                    <div class="bg-white border-2 border-slate-100 p-5 rounded-3xl shadow-sm">
-                        <div class="flex justify-between items-start mb-3">
-                            <span class="bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm uppercase">Nuevo</span>
-                            <span class="text-xs font-black text-orange-600">Propina: $${p.propina}</span>
-                        </div>
-                        <p class="font-black text-xl text-slate-800 leading-tight">${p.cantidad} TANQUES ${p.color.toUpperCase()}</p>
-                        <p class="text-xs font-bold text-slate-400 mb-4 uppercase">${p.tipo}</p>
-                        
-                        <div class="flex gap-2">
-                            <button onclick="aceptarConPrecioBase('${docSnap.id}', '${precioSugerido}')" 
-                                class="flex-1 bg-green-600 text-white p-4 rounded-xl font-black text-xs shadow-md">
-                                ACEPTAR POR $${precioSugerido}
-                            </button>
-                            <button onclick="contraoferta('${docSnap.id}')" 
-                                class="bg-slate-900 text-white p-4 rounded-xl font-black text-[10px]">
-                                OTRA OFERTA
-                            </button>
-                        </div>
-                    </div>`;
+        window.registrarRol = async (rol) => {
+            const appID = (rol === 'cliente' ? 'CLN-' : 'PRV-') + Math.floor(1000 + Math.random() * 9000);
+            await setDoc(doc(db, "usuarios", userGlobal.uid), {
+                nombre: userGlobal.displayName,
+                email: userGlobal.email,
+                foto: userGlobal.photoURL,
+                rol: rol,
+                appID: appID,
+                fechaRegistro: new Date().toISOString()
             });
-        });
-    }
+            location.reload();
+        };
 
-    window.aceptarConPrecioBase = async (id, precio) => {
-        await updateDoc(doc(db, "pedidos", id), {
-            estado: 'aceptado',
-            precioFinal: precio,
-            proveedorID: document.getElementById('prov-id').innerText,
-            fechaAceptado: new Date().toISOString()
-        });
-        alert("¡Pedido aceptado con tu precio base!");
-    };
-    
-    // ... (Otras funciones de navegación y cerrar sesión) ...
-</script>
+        // --- LÓGICA CLIENTE ---
+        function initCliente(data) {
+            showView('view-cliente');
+            document.getElementById('u-name').innerText = data.nombre;
+            document.getElementById('u-id').innerText = data.appID;
+            document.getElementById('u-photo').src = data.foto;
+
+            navigator.geolocation.getCurrentPosition(pos => {
+                const { latitude: lat, longitude: lng } = pos.coords;
+                if (!map) {
+                    map = L.map('map').setView([lat, lng], 17);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                    marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                }
+            });
+
+            // Escuchar pedidos del cliente
+            const q = query(collection(db, "pedidos"), where("clienteID", "==", data.appID), orderBy("fecha", "desc"));
+            onSnapshot(q, snap => {
+                const hist = document.getElementById('c-historial');
+                hist.innerHTML = "";
+                snap.forEach(d => {
+                    const p = d.data();
+                    hist.innerHTML += `
+                        <div class="bg-slate-50 border-l-4 border-red-500 p-4 rounded-r-xl relative shadow-sm">
+                            <p class="font-black text-slate-700 text-xs">${p.cantidad} TANQUES ${p.color.toUpperCase()}</p>
+                            <p class="text-[9px] text-slate-400 italic">${p.estado.toUpperCase()}</p>
+                            ${p.precioFinal ? `<p class="text-green-600 font-bold text-xs mt-1">Precio: $${p.precioFinal}</p>` : ''}
+                        </div>`;
+                });
+            });
+        }
+
+        document.getElementById('btn-pedir').onclick = async function() {
+            this.disabled = true;
+            this.innerText = "PROCESANDO...";
+            const pos = marker.getLatLng();
+            await addDoc(collection(db, "pedidos"), {
+                clienteID: document.getElementById('u-id').innerText,
+                tipo: document.getElementById('c-tipo').value,
+                color: document.getElementById('c-color').value,
+                cantidad: document.getElementById('c-cant').value,
+                propina: document.getElementById('c-propina').value || 0,
+                lat: pos.lat, lng: pos.lng,
+                estado: 'pendiente',
+                fecha: new Date().toISOString()
+            });
+            setTimeout(() => { this.disabled = false; this.innerText = "PEDIR GAS AHORA"; }, 3000);
+            alert("✅ Pedido enviado!");
+        };
+
+        // --- LÓGICA PROVEEDOR ---
+        function initProveedor(data) {
+            showView('view-proveedor');
+            if (!data.precioDomestico) {
+                document.getElementById('p-config').classList.remove('hidden');
+            } else {
+                document.getElementById('p-main').classList.remove('hidden');
+                document.getElementById('pr-name').innerText = data.nombre;
+                document.getElementById('pr-id').innerText = data.appID;
+                escucharPedidosPendientes(data);
+            }
+        }
+
+        window.guardarPrecios = async () => {
+            const dom = document.getElementById('p-base-dom').value;
+            const ind = document.getElementById('p-base-ind').value;
+            if(!dom || !ind) return alert("Completa los precios");
+            await updateDoc(doc(db, "usuarios", userGlobal.uid), { precioDomestico: dom, precioIndustrial: ind });
+            location.reload();
+        };
+
+        function escucharPedidosPendientes(prov) {
+            const q = query(collection(db, "pedidos"), where("estado", "==", "pendiente"), orderBy("fecha", "desc"));
+            onSnapshot(q, snap => {
+                const lista = document.getElementById('p-lista');
+                lista.innerHTML = "";
+                snap.forEach(d => {
+                    const p = d.data();
+                    const sugerido = p.tipo === 'domestico' ? prov.precioDomestico : prov.precioIndustrial;
+                    lista.innerHTML += `
+                        <div class="bg-white border-2 border-slate-100 p-4 rounded-2xl shadow-sm">
+                            <p class="font-black text-slate-800 text-sm">${p.cantidad} TANQUE(S) ${p.color.toUpperCase()}</p>
+                            <p class="text-[10px] text-orange-600 font-bold mb-3">+ $${p.propina} PROPINA</p>
+                            <div class="flex gap-2">
+                                <button onclick="aceptarPedido('${d.id}', '${sugerido}')" class="flex-1 bg-green-600 text-white p-3 rounded-xl font-bold text-[10px]">ACEPTAR POR $${sugerido}</button>
+                                <a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" class="bg-blue-100 text-blue-700 p-3 rounded-xl text-[10px] font-bold">MAPA</a>
+                            </div>
+                        </div>`;
+                });
+            });
+        }
+
+        window.aceptarPedido = async (id, precio) => {
+            await updateDoc(doc(db, "pedidos", id), {
+                estado: 'aceptado',
+                precioFinal: precio,
+                proveedorID: document.getElementById('pr-id').innerText
+            });
+            alert("¡Pedido aceptado!");
+        };
+
+        // --- SESIÓN ---
+        document.getElementById('btn-login').onclick = () => signInWithPopup(auth, provider);
+        window.cerrarSesion = () => signOut(auth).then(() => location.reload());
+    </script>
+</body>
+</html>
