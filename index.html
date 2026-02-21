@@ -3,50 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GasSolución 🇪🇨</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; text-align: center; background-color: #f7f9fc; padding: 20px; color: #333; }
-        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
-        h1 { color: #d32f2f; }
-        input, select { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
-        .btn-registro { background: #d32f2f; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn-gas { background: #ffca28; border: none; padding: 20px; font-size: 24px; font-weight: bold; border-radius: 50%; width: 200px; height: 200px; cursor: pointer; box-shadow: 0 10px 25px rgba(255, 202, 40, 0.4); margin-top: 20px; color: #212121; }
-        .pedido-card { text-align: left; background: #fffde7; padding: 15px; margin: 10px 0; border-left: 5px solid #ffca28; border-radius: 8px; font-size: 14px; }
-        .hidden { display: none; }
-    </style>
+    <title>GasSolución | Bienvenida</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="container">
-        <h1>GasSolución</h1>
-        
-        <div id="seccion-registro">
-            <p>Identifícate para continuar</p>
-            <select id="rol">
-                <option value="cliente">Soy Cliente (Quiero Gas)</option>
-                <option value="proveedor">Soy Proveedor (Vender Gas)</option>
-            </select>
-            <input type="text" id="nombre" placeholder="Nombre completo">
-            <input type="tel" id="telefono" placeholder="Número de celular">
-            <input type="text" id="direccion" placeholder="Dirección (Solo clientes)">
-            <button class="btn-registro" id="guardar-datos">ENTRAR</button>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+
+    <div id="app" class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md text-center">
+        <h1 class="text-3xl font-bold text-red-600 mb-2">GasSolución 🇪🇨</h1>
+        <p class="text-slate-500 mb-8">Tu gas a un clic, seguro y rápido.</p>
+
+        <div id="view-login">
+            <button id="btn-google" class="w-full flex items-center justify-center gap-3 bg-white border border-slate-300 p-4 rounded-xl font-semibold hover:bg-slate-50 transition">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="20">
+                Entrar con Google
+            </button>
         </div>
 
-        <div id="seccion-cliente" class="hidden">
-            <p id="bienvenida-cliente"></p>
-            <button class="btn-gas" id="pedir">PEDIR GAS 🔥</button>
-            <p><small><a href="#" onclick="cerrarSesion()">Cerrar Sesión / Cambiar datos</a></small></p>
+        <div id="view-role" class="hidden">
+            <h2 class="text-xl font-semibold mb-4">¿Cómo usarás la App?</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="setRole('cliente')" class="p-6 border-2 border-red-100 rounded-2xl hover:border-red-500 transition group">
+                    <span class="text-4xl block mb-2">🏠</span>
+                    <span class="font-bold text-slate-700">Cliente</span>
+                </button>
+                <button onclick="setRole('proveedor')" class="p-6 border-2 border-red-100 rounded-2xl hover:border-red-500 transition group">
+                    <span class="text-4xl block mb-2">🚛</span>
+                    <span class="font-bold text-slate-700">Proveedor</span>
+                </button>
+            </div>
         </div>
 
-        <div id="seccion-proveedor" class="hidden">
-            <h3>Pedidos Pendientes</h3>
-            <div id="lista-pedidos">Cargando pedidos...</div>
-            <p><small><a href="#" onclick="cerrarSesion()">Cerrar Sesión</a></small></p>
+        <div id="view-loading" class="hidden">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+            <p class="mt-4 text-slate-600">Configurando tu perfil...</p>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDWGkvNQHt7URcoP2risWMBfYtdV1Un7Sk",
@@ -58,79 +54,75 @@
         };
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
 
-        document.getElementById('guardar-datos').onclick = async () => {
-            const rol = document.getElementById('rol').value;
-            const tlf = document.getElementById('telefono').value;
-            const nombre = document.getElementById('nombre').value;
-            const dir = document.getElementById('direccion').value;
+        let currentUser = null;
 
-            if(!tlf || !nombre) return alert("Por favor, llena tu nombre y teléfono");
-
-            const q = query(collection(db, "usuarios"), where("telefono", "==", tlf));
-            const querySnapshot = await getDocs(q);
-
-            let usuario;
-            if (querySnapshot.empty) {
-                usuario = { nombre, telefono: tlf, direccion: dir, rol };
-                await addDoc(collection(db, "usuarios"), usuario);
-            } else {
-                usuario = querySnapshot.docs[0].data();
-            }
-
-            localStorage.setItem('userGas', JSON.stringify(usuario));
-            renderizarApp();
-        };
-
-        function renderizarApp() {
-            const user = JSON.parse(localStorage.getItem('userGas'));
-            if (!user) return;
-            document.getElementById('seccion-registro').classList.add('hidden');
-            if(user.rol === 'cliente') {
-                document.getElementById('seccion-cliente').classList.remove('hidden');
-                document.getElementById('bienvenida-cliente').innerHTML = `Hola <b>${user.nombre}</b><br><small>${user.direccion}</small>`;
-            } else {
-                document.getElementById('seccion-proveedor').classList.remove('hidden');
-                escucharPedidos();
-            }
-        }
-
-        document.getElementById('pedir').onclick = async () => {
-            const user = JSON.parse(localStorage.getItem('userGas'));
+        // Lógica de Login
+        document.getElementById('btn-google').onclick = async () => {
             try {
-                await addDoc(collection(db, "pedidos"), {
-                    cliente: user.nombre, tlf: user.telefono, dir: user.direccion,
-                    fecha: new Date().toLocaleString(), estado: "pendiente"
-                });
-                alert("✅ ¡Pedido enviado! El repartidor ha sido notificado.");
-            } catch (e) { alert("Error al pedir: " + e.message); }
+                const result = await signInWithPopup(auth, provider);
+                checkUser(result.user);
+            } catch (error) {
+                alert("Error al entrar con Google");
+            }
         };
 
-        function escucharPedidos() {
-            onSnapshot(collection(db, "pedidos"), (snapshot) => {
-                const lista = document.getElementById('lista-pedidos');
-                lista.innerHTML = "";
-                if(snapshot.empty) lista.innerHTML = "No hay pedidos hoy.";
-                snapshot.forEach(doc => {
-                    const p = doc.data();
-                    lista.innerHTML += `
-                        <div class="pedido-card">
-                            <b>Cliente:</b> ${p.cliente}<br>
-                            <b>Tlf:</b> ${p.tlf}<br>
-                            <b>Dir:</b> ${p.dir}<br>
-                            <small>Enviado: ${p.fecha}</small>
-                        </div>`;
-                });
-            });
+        async function checkUser(user) {
+            showView('view-loading');
+            const userRef = doc(db, "usuarios", user.uid);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists()) {
+                redirectUser(userSnap.data());
+            } else {
+                currentUser = user;
+                showView('view-role');
+            }
         }
 
-        window.cerrarSesion = () => {
-            localStorage.removeItem('userGas');
-            location.reload();
+        window.setRole = async (rol) => {
+            showView('view-loading');
+            
+            // Generar ID Único (Ej: CLN-4829 o PRV-9283)
+            const randomID = Math.floor(1000 + Math.random() * 9000);
+            const customID = rol === 'cliente' ? `CLN-${randomID}` : `PRV-${randomID}`;
+
+            const userData = {
+                uid: currentUser.uid,
+                nombre: currentUser.displayName,
+                email: currentUser.email,
+                foto: currentUser.photoURL,
+                rol: rol,
+                appID: customID,
+                fechaRegistro: new Date().toISOString(),
+                saldo: 0
+            };
+
+            await setDoc(doc(db, "usuarios", currentUser.uid), userData);
+            redirectUser(userData);
         };
 
-        renderizarApp();
+        function redirectUser(data) {
+            // Guardar localmente para no repetir login
+            localStorage.setItem('gs_user', JSON.stringify(data));
+            
+            if(data.rol === 'cliente') {
+                alert("Bienvenido " + data.nombre + " (ID: " + data.appID + "). Fase 2 en camino...");
+                // Aquí irá el link a la fase 2
+            } else {
+                alert("Bienvenido Proveedor (ID: " + data.appID + "). Fase 3 en camino...");
+            }
+        }
+
+        function showView(viewId) {
+            ['view-login', 'view-role', 'view-loading'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+        }
     </script>
 </body>
 </html>
