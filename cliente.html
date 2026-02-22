@@ -147,21 +147,71 @@
 
     async function realizarPedido() {
         const pos = marker.getLatLng();
+        const btnMain = document.getElementById('btn-main');
         
-        // 1. OBTENER DIRECCIÓN AUTOMÁTICA (Reverse Geocoding)
+        // Bloqueamos el botón para evitar doble clic
+        btnMain.disabled = true;
+        btnMain.innerText = "PROCESANDO...";
+
         let direccionCalle = "Buscando dirección...";
+        let sectorReal = "Llano Chico";
+
         try {
-            // Usamos la API de Nominatim para sacar el nombre de las calles
             const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${pos.lat}&lon=${pos.lng}`);
             const data = await response.json();
-            
-            // Extraemos una dirección corta (Calle y número o intersección)
             const partes = data.display_name.split(',');
-            direccionCalle = partes[0] + (partes[1] ? " y " + partes[1] : "");
+            direccionCalle = (partes[0] || "") + (partes[1] ? " y " + partes[1] : "");
+            sectorReal = data.address.suburb || data.address.neighbourhood || "Sector Llano Chico";
         } catch (error) {
-            console.error("Error obteniendo dirección:", error);
-            direccionCalle = "Dirección no disponible";
+            direccionCalle = "Ubicación GPS";
         }
+
+        const pedido = {
+            uidC: auth.currentUser.uid,
+            nombre: auth.currentUser.displayName || "Usuario Gas", 
+            items: [],
+            propina: document.getElementById('f-propina').value || 0,
+            lat: pos.lat,
+            lng: pos.lng,
+            direccion: direccionCalle, 
+            sector: sectorReal,
+            estado: "pendiente",
+            fecha: new Date().toISOString()
+        };
+
+        // Recolectar cantidades de los inputs
+        const ids = ['cd-ama', 'cd-azu', 'cd-nar', 'ci-ama', 'ci-azu', 'ci-nar'];
+        const etiquetas = [
+            {t:'Doméstico', c:'Amarillo'}, {t:'Doméstico', c:'Azul'}, {t:'Doméstico', c:'Naranja'},
+            {t:'Industrial', c:'Amarillo'}, {t:'Industrial', c:'Azul'}, {t:'Industrial', c:'Naranja'}
+        ];
+
+        ids.forEach((id, index) => {
+            const val = parseInt(document.getElementById(id).value);
+            if (val > 0) {
+                pedido.items.push({ 
+                    n: val, 
+                    t: etiquetas[index].t, 
+                    c: etiquetas[index].c 
+                });
+            }
+        });
+
+        if (pedido.items.length === 0) {
+            alert("⚠️ Por favor, indica cuántos tanques necesitas.");
+            btnMain.disabled = false;
+            btnMain.innerText = "PEDIR GAS AHORA";
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, "pedidos"), pedido);
+            alert("🚀 ¡Pedido enviado! El repartidor va en camino.");
+        } catch (e) {
+            alert("Error al enviar: " + e.message);
+            btnMain.disabled = false;
+        }
+    }
 
         const pedido = {
             uidC: auth.currentUser.uid,
