@@ -7,72 +7,85 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        #map { height: 250px; border-radius: 24px; margin-bottom: 16px; border: 2px solid #fee2e2; z-index: 1; }
-        .input-cant { @apply bg-white border border-slate-200 rounded-lg p-1 w-14 text-center font-black text-slate-800 outline-none focus:ring-2 ring-red-500; }
-        .card-seccion { @apply bg-slate-50 p-4 rounded-3xl border border-slate-100 mb-4 transition-all; }
-    </style>
 </head>
-<body class="bg-slate-50 min-h-screen p-4 font-sans text-slate-900">
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900">
 
-    <div id="app" class="max-w-md mx-auto bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-100 min-h-[700px] relative">
+    <div id="app" class="max-w-md mx-auto bg-white min-h-screen shadow-2xl flex flex-col relative">
         
-        <div class="flex justify-between items-center mb-4">
-            <div class="flex items-center gap-3">
-                <img id="u-photo" class="w-12 h-12 rounded-2xl border-2 border-red-500 object-cover shadow-sm" src="" alt="">
-                <div>
-                    <p id="u-name" class="font-black text-slate-900 leading-none text-sm">Cargando...</p>
-                    <p id="u-id" class="text-[9px] text-slate-400 font-bold uppercase mt-1 tracking-widest"></p>
-                </div>
+        <div class="p-6 pb-2 flex justify-between items-center">
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Solicitar Servicio</p>
+                <h1 id="u-nombre" class="text-3xl font-black tracking-tighter text-slate-900">Cargando...</h1>
             </div>
-            <button onclick="cerrarSesion()" class="bg-slate-100 p-2 px-4 rounded-2xl text-slate-500 font-black text-[10px] uppercase hover:bg-red-50 hover:text-red-600 transition-colors">Salir</button>
+            <button onclick="cerrarSesion()" class="bg-slate-100 p-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-slate-500">Salir</button>
         </div>
 
-        <div id="map"></div>
-        
-        <div class="space-y-4 mb-6">
+        <div class="px-6 mb-4">
+            <div id="map" class="h-48 rounded-[2.5rem] shadow-inner border-4 border-slate-50 overflow-hidden z-0"></div>
+        </div>
+
+        <div class="px-6 space-y-4 pb-32">
             
-            <div class="card-seccion">
-                <div class="flex items-center gap-2 mb-3">
-                    <input type="checkbox" id="check-dom" onchange="togglePanel('dom')" class="w-5 h-5 accent-red-600">
-                    <label class="font-black text-sm text-slate-800 uppercase">🏠 Gas Doméstico</label>
+            <div class="bg-slate-50 p-5 rounded-[2rem] border border-slate-100">
+                <div class="flex items-center gap-3 mb-4">
+                    <input type="checkbox" id="check-dom" class="w-6 h-6 rounded-lg accent-red-600">
+                    <label for="check-dom" class="font-black uppercase text-xs tracking-widest text-slate-400">Gas Doméstico</label>
                 </div>
-                <div id="panel-dom" class="hidden pl-7 space-y-2">
-                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🟡 Amarillo</span><input type="number" id="cd-ama" value="0" min="0" class="input-cant"></div>
-                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🔵 Azul</span><input type="number" id="cd-azu" value="0" min="0" class="input-cant"></div>
-                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🟠 Naranja</span><input type="number" id="cd-nar" value="0" min="0" class="input-cant"></div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="text-center">
+                        <p class="text-[9px] font-bold text-yellow-600 mb-1">AMARILLO</p>
+                        <input type="number" id="cd-ama" value="0" onfocus="if(this.value=='0')this.value=''" class="w-full bg-white border-2 border-slate-200 rounded-xl p-2 text-center font-bold">
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[9px] font-bold text-blue-600 mb-1">AZUL</p>
+                        <input type="number" id="cd-azu" value="0" onfocus="if(this.value=='0')this.value=''" class="w-full bg-white border-2 border-slate-200 rounded-xl p-2 text-center font-bold">
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[9px] font-bold text-orange-600 mb-1">NARANJA</p>
+                        <input type="number" id="cd-nar" value="0" onfocus="if(this.value=='0')this.value=''" class="w-full bg-white border-2 border-slate-200 rounded-xl p-2 text-center font-bold">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 p-5 rounded-[2rem] border border-slate-100">
+                <div class="flex items-center gap-3 mb-4">
+                    <input type="checkbox" id="check-ind" class="w-6 h-6 rounded-lg accent-red-600">
+                    <label for="check-ind" class="font-black uppercase text-xs tracking-widest text-slate-400">Gas Industrial</label>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="text-center">
+                        <p class="text-[9px] font-bold text-yellow-600 mb-1">AMARILLO</p>
+                        <input type="number" id="ci-ama" value="0" onfocus="if(this.value=='0')this.value=''" class="w-full bg-white border-2 border-slate-200 rounded-xl p-2 text-center font-bold">
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[9px] font-bold text-blue-600 mb-1">AZUL</p>
+                        <input type="number" id="ci-azu" value="0" onfocus="if(this.value=='0')this.value=''" class="w-full bg-white border-2 border-slate-200 rounded-xl p-2 text-center font-bold">
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[9px] font-bold text-orange-600 mb-1">NARANJA</p>
+                        <input type="number" id="ci-nar" value="0" onfocus="if(this.value=='0')this.value=''" class="w-full bg-white border-2 border-slate-200 rounded-xl p-2 text-center font-bold">
+                    </div>
                 </div>
             </div>
 
-            <div class="card-seccion">
-                <div class="flex items-center gap-2 mb-3">
-                    <input type="checkbox" id="check-ind" onchange="togglePanel('ind')" class="w-5 h-5 accent-red-600">
-                    <label class="font-black text-sm text-slate-800 uppercase">🏭 Gas Industrial</label>
-                </div>
-                <div id="panel-ind" class="hidden pl-7 space-y-2">
-                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🟡 Amarillo</span><input type="number" id="ci-ama" value="0" min="0" class="input-cant"></div>
-                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🔵 Azul</span><input type="number" id="ci-azu" value="0" min="0" class="input-cant"></div>
-                    <div class="flex justify-between items-center"><span class="text-xs font-bold text-slate-500">🟠 Naranja</span><input type="number" id="ci-nar" value="0" min="0" class="input-cant"></div>
-                </div>
+            <div class="flex justify-between items-center bg-red-50 p-5 rounded-[2rem] border border-red-100">
+                <span class="font-black text-red-600 text-xs uppercase tracking-widest">💰 Propina sugerida</span>
+                <input type="number" id="f-propina" value="0" onfocus="if(this.value=='0')this.value=''" class="w-20 bg-white border-2 border-red-200 rounded-xl p-2 text-center font-black text-red-600">
             </div>
+
         </div>
 
-        <div class="mb-6 px-2">
-            <label class="text-[10px] font-black text-orange-500 uppercase tracking-widest">Propina para el Chofer ($)</label>
-            <input type="number" id="f-propina" placeholder="0.00" class="w-full mt-1 p-4 bg-orange-50 text-orange-600 border border-orange-100 rounded-2xl font-black outline-none focus:ring-2 ring-orange-500">
+        <div class="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent z-10">
+            <button id="btn-main" onclick="realizarPedido()" class="w-full p-6 rounded-[2rem] font-black text-xl bg-red-600 text-white shadow-2xl shadow-red-200 hover:scale-[1.02] active:scale-95 transition-all">
+                PEDIR GAS AHORA
+            </button>
         </div>
-
-        <button id="btn-main" class="w-full p-6 rounded-[2rem] font-black text-xl shadow-2xl transition-all uppercase tracking-tighter">
-            Pedir Gas Ahora
-        </button>
-
-        <div id="historial" class="mt-8 space-y-3 pb-10"></div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, addDoc, query, where, onSnapshot, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDWGkvNQHt7URcoP2risWMBfYtdV1Un7Sk",
@@ -87,173 +100,132 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        let map, marker, userGlobal;
+        let map, marker;
+        let userGlobal = null;
 
-        // PROTECCIÓN DE RUTA
-        onAuthStateChanged(auth, async (user) => {
+        // --- INICIO DE SESIÓN ---
+        onAuthStateChanged(auth, (user) => {
             if (!user) {
                 window.location.href = "index.html";
             } else {
                 userGlobal = user;
-                const snap = await getDoc(doc(db, "usuarios", user.uid));
-                if (snap.exists() && snap.data().rol === 'cliente') {
-                    setupUI(snap.data());
-                    initMap();
-                    escucharPedidos();
-                } else {
-                    window.location.href = "index.html";
-                }
+                document.getElementById('u-nombre').innerText = user.displayName.split(' ')[0];
+                initMap();
+                escucharPedidos();
             }
         });
 
-        function setupUI(data) {
-            document.getElementById('u-name').innerText = data.nombre;
-            document.getElementById('u-id').innerText = data.appID;
-            document.getElementById('u-photo').src = data.foto;
-        }
-
+        // --- MAPA ---
         function initMap() {
-            navigator.geolocation.getCurrentPosition(pos => {
-                const { latitude: lat, longitude: lng } = pos.coords;
-                if (!map) {
-                    map = L.map('map').setView([lat, lng], 17);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                    marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-                }
+            if (map) return;
+            map = L.map('map').setView([-0.1807, -78.4678], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            
+            marker = L.marker([-0.1807, -78.4678], {draggable: true}).addTo(map);
+
+            navigator.geolocation.getCurrentPosition(p => {
+                const coords = [p.coords.latitude, p.coords.longitude];
+                map.setView(coords, 16);
+                marker.setLatLng(coords);
             });
         }
 
-        window.togglePanel = (tipo) => {
-            const isChecked = document.getElementById(`check-${tipo}`).checked;
-            document.getElementById(`panel-${tipo}`).classList.toggle('hidden', !isChecked);
+        // --- LÓGICA DE PEDIDOS ---
+        window.realizarPedido = async function() {
+            const btn = document.getElementById('btn-main');
+            const pos = marker.getLatLng();
+            
+            btn.disabled = true;
+            btn.innerText = "LOCALIZANDO...";
+
+            // 1. Obtener dirección automática
+            let calle = "Ubicación GPS";
+            let sector = "Llano Chico";
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${pos.lat}&lon=${pos.lng}`);
+                const data = await res.json();
+                const p = data.display_name.split(',');
+                calle = (p[0] || "") + (p[1] ? " y " + p[1] : "");
+                sector = data.address.suburb || data.address.neighbourhood || "Sector Local";
+            } catch (e) { console.error(e); }
+
+            const pedido = {
+                uidC: userGlobal.uid,
+                nombre: userGlobal.displayName,
+                lat: pos.lat,
+                lng: pos.lng,
+                direccion: calle,
+                sector: sector,
+                propina: document.getElementById('f-propina').value || 0,
+                estado: 'pendiente',
+                fecha: new Date().toISOString(),
+                items: []
+            };
+
+            // Recopilar items
+            const config = [
+                {id: 'cd-ama', t: 'Doméstico', c: 'Amarillo', chk: 'check-dom'},
+                {id: 'cd-azu', t: 'Doméstico', c: 'Azul', chk: 'check-dom'},
+                {id: 'cd-nar', t: 'Doméstico', c: 'Naranja', chk: 'check-dom'},
+                {id: 'ci-ama', t: 'Industrial', c: 'Amarillo', chk: 'check-ind'},
+                {id: 'ci-azu', t: 'Industrial', c: 'Azul', chk: 'check-ind'},
+                {id: 'ci-nar', t: 'Industrial', c: 'Naranja', chk: 'check-ind'}
+            ];
+
+            config.forEach(item => {
+                const cant = parseInt(document.getElementById(item.id).value);
+                if (cant > 0 && document.getElementById(item.chk).checked) {
+                    pedido.items.push({ n: cant, t: item.t, c: item.c });
+                }
+            });
+
+            if (pedido.items.length === 0) {
+                alert("Selecciona al menos un tanque y marca la casilla correspondiente.");
+                btn.disabled = false;
+                btn.innerText = "PEDIR GAS AHORA";
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, "pedidos"), pedido);
+                alert("¡Pedido enviado!");
+            } catch (e) {
+                alert("Error: " + e.message);
+                btn.disabled = false;
+            }
         };
 
         function escucharPedidos() {
-            const q = query(collection(db, "pedidos"), where("uidC", "==", auth.currentUser.uid), where("estado", "in", ["pendiente", "aceptado"]));
+            const q = query(collection(db, "pedidos"), where("uidC", "==", auth.currentUser.uid));
             onSnapshot(q, snap => {
                 const btn = document.getElementById('btn-main');
                 if (!snap.empty) {
                     const ped = snap.docs[0];
-                    btn.innerText = "ANULAR MI PEDIDO";
-                    btn.className = "w-full p-6 rounded-[2rem] font-black text-xl bg-slate-900 text-white shadow-xl";
-                    btn.onclick = () => cancelarPedido(ped.id);
+                    const estado = ped.data().estado;
+                    if (estado === 'pendiente') {
+                        btn.innerText = "ANULAR SOLICITUD";
+                        btn.className = "w-full p-6 rounded-[2.5rem] font-black text-xl bg-slate-900 text-white shadow-xl";
+                        btn.onclick = () => anularPedido(ped.id);
+                    } else {
+                        btn.innerText = "REPARTIDOR EN CAMINO";
+                        btn.className = "w-full p-6 rounded-[2.5rem] font-black text-xl bg-green-600 text-white shadow-xl animate-pulse";
+                        btn.onclick = null;
+                    }
                 } else {
                     btn.innerText = "PEDIR GAS AHORA";
-                    btn.className = "w-full p-6 rounded-[2rem] font-black text-xl bg-red-600 text-white shadow-red-200 shadow-2xl";
+                    btn.className = "w-full p-6 rounded-[2.5rem] font-black text-xl bg-red-600 text-white shadow-2xl";
                     btn.onclick = realizarPedido;
                 }
+                btn.disabled = false;
             });
         }
 
-    async function realizarPedido() {
-        const pos = marker.getLatLng();
-        const btnMain = document.getElementById('btn-main');
-        
-        // Bloqueamos el botón para evitar doble clic
-        btnMain.disabled = true;
-        btnMain.innerText = "PROCESANDO...";
-
-        let direccionCalle = "Buscando dirección...";
-        let sectorReal = "Llano Chico";
-
-        try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${pos.lat}&lon=${pos.lng}`);
-            const data = await response.json();
-            const partes = data.display_name.split(',');
-            direccionCalle = (partes[0] || "") + (partes[1] ? " y " + partes[1] : "");
-            sectorReal = data.address.suburb || data.address.neighbourhood || "Sector Llano Chico";
-        } catch (error) {
-            direccionCalle = "Ubicación GPS";
-        }
-
-        const pedido = {
-            uidC: auth.currentUser.uid,
-            nombre: auth.currentUser.displayName || "Usuario Gas", 
-            items: [],
-            propina: document.getElementById('f-propina').value || 0,
-            lat: pos.lat,
-            lng: pos.lng,
-            direccion: direccionCalle, 
-            sector: sectorReal,
-            estado: "pendiente",
-            fecha: new Date().toISOString()
+        window.anularPedido = async (id) => {
+            if(confirm("¿Anular pedido?")) await deleteDoc(doc(db, "pedidos", id));
         };
-
-        // Recolectar cantidades de los inputs
-        const ids = ['cd-ama', 'cd-azu', 'cd-nar', 'ci-ama', 'ci-azu', 'ci-nar'];
-        const etiquetas = [
-            {t:'Doméstico', c:'Amarillo'}, {t:'Doméstico', c:'Azul'}, {t:'Doméstico', c:'Naranja'},
-            {t:'Industrial', c:'Amarillo'}, {t:'Industrial', c:'Azul'}, {t:'Industrial', c:'Naranja'}
-        ];
-
-        ids.forEach((id, index) => {
-            const val = parseInt(document.getElementById(id).value);
-            if (val > 0) {
-                pedido.items.push({ 
-                    n: val, 
-                    t: etiquetas[index].t, 
-                    c: etiquetas[index].c 
-                });
-            }
-        });
-
-        if (pedido.items.length === 0) {
-            alert("⚠️ Por favor, indica cuántos tanques necesitas.");
-            btnMain.disabled = false;
-            btnMain.innerText = "PEDIR GAS AHORA";
-            return;
-        }
-
-        try {
-            await addDoc(collection(db, "pedidos"), pedido);
-            alert("🚀 ¡Pedido enviado! El repartidor va en camino.");
-        } catch (e) {
-            alert("Error al enviar: " + e.message);
-            btnMain.disabled = false;
-        }
-    }
-
-        const pedido = {
-            uidC: auth.currentUser.uid,
-            nombre: userGlobal.displayName, // Aquí enviamos el nombre real de Google
-            items: [],
-            propina: document.getElementById('f-propina').value || 0,
-            lat: pos.lat,
-            lng: pos.lng,
-            direccion: direccionCalle, // Guardamos la calle real encontrada
-            sector: "Llano Chico", // Puedes dejarlo fijo o sacarlo de 'data.address.suburb'
-            estado: "pendiente",
-            fecha: new Date().toISOString()
-        };
-
-        // Recolectar cantidades (Esta parte se mantiene igual a tu lógica)
-        const roles = ['cd', 'ci'];
-        const tipos = ['Doméstico', 'Industrial'];
-        const colores = ['Amarillo', 'Azul', 'Naranja'];
-        const ids = ['ama', 'azu', 'nar'];
-
-        roles.forEach((r, idxT) => {
-            ids.forEach((id, idxC) => {
-                const cant = document.getElementById(`${r}-${id}`).value;
-                if (cant > 0 && document.getElementById(`check-${r}`).checked) {
-                    pedido.items.push({ t: tipos[idxT], c: colores[idxC], n: cant });
-                }
-            });
-        });
-
-        if (pedido.items.length === 0) return alert("Indica cuántos tanques necesitas");
-
-        await addDoc(collection(db, "pedidos"), pedido);
-        alert("🚀 Pedido enviado con éxito");
-    }
-
-        async function cancelarPedido(id) {
-            if (confirm("¿Seguro que quieres cancelar el pedido?")) {
-                await deleteDoc(doc(db, "pedidos", id));
-            }
-        }
 
         window.cerrarSesion = () => signOut(auth).then(() => window.location.href = "index.html");
+
     </script>
 </body>
 </html>
