@@ -103,34 +103,42 @@
         let map, marker;
         let userGlobal = null;
 
-        // --- INICIO DE SESIÓN ---
         onAuthStateChanged(auth, (user) => {
             if (!user) {
                 window.location.href = "index.html";
             } else {
                 userGlobal = user;
-                document.getElementById('u-nombre').innerText = user.displayName.split(' ')[0];
+                // Arreglo carga de nombre
+                document.getElementById('u-nombre').innerText = user.displayName ? user.displayName.split(' ')[0] : "Hola";
                 initMap();
                 escucharPedidos();
             }
         });
 
-        // --- MAPA ---
         function initMap() {
             if (map) return;
-            map = L.map('map').setView([-0.1807, -78.4678], 15);
+            // Centro inicial neutro
+            map = L.map('map', { zoomControl: false }).setView([-0.1807, -78.4678], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            
             marker = L.marker([-0.1807, -78.4678], {draggable: true}).addTo(map);
 
-            navigator.geolocation.getCurrentPosition(p => {
-                const coords = [p.coords.latitude, p.coords.longitude];
-                map.setView(coords, 16);
-                marker.setLatLng(coords);
+            // DETECCIÓN DE UBICACIÓN REAL
+            map.locate({setView: true, maxZoom: 16, enableHighAccuracy: true});
+
+            map.on('locationfound', (e) => {
+                marker.setLatLng(e.latlng);
+            });
+
+            map.on('locationerror', () => {
+                console.log("GPS no detectado automáticamente, usando IP");
+                navigator.geolocation.getCurrentPosition(p => {
+                    const coords = [p.coords.latitude, p.coords.longitude];
+                    map.setView(coords, 16);
+                    marker.setLatLng(coords);
+                });
             });
         }
 
-        // --- LÓGICA DE PEDIDOS ---
         window.realizarPedido = async function() {
             const btn = document.getElementById('btn-main');
             const pos = marker.getLatLng();
@@ -138,20 +146,19 @@
             btn.disabled = true;
             btn.innerText = "LOCALIZANDO...";
 
-            // 1. Obtener dirección automática
             let calle = "Ubicación GPS";
             let sector = "Llano Chico";
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${pos.lat}&lon=${pos.lng}`);
                 const data = await res.json();
                 const p = data.display_name.split(',');
-                calle = (p[0] || "") + (p[1] ? " y " + p[1] : "");
-                sector = data.address.suburb || data.address.neighbourhood || "Sector Local";
+                calle = (p[0] || "").trim() + (p[1] ? " y " + p[1].trim() : "");
+                sector = data.address.suburb || data.address.neighbourhood || data.address.city_district || "Sector Local";
             } catch (e) { console.error(e); }
 
             const pedido = {
                 uidC: userGlobal.uid,
-                nombre: userGlobal.displayName,
+                nombre: userGlobal.displayName || "Cliente",
                 lat: pos.lat,
                 lng: pos.lng,
                 direccion: calle,
@@ -162,7 +169,6 @@
                 items: []
             };
 
-            // Recopilar items
             const config = [
                 {id: 'cd-ama', t: 'Doméstico', c: 'Amarillo', chk: 'check-dom'},
                 {id: 'cd-azu', t: 'Doméstico', c: 'Azul', chk: 'check-dom'},
@@ -173,14 +179,16 @@
             ];
 
             config.forEach(item => {
-                const cant = parseInt(document.getElementById(item.id).value);
-                if (cant > 0 && document.getElementById(item.chk).checked) {
+                const input = document.getElementById(item.id);
+                const cant = parseInt(input.value);
+                const isChecked = document.getElementById(item.chk).checked;
+                if (cant > 0 && isChecked) {
                     pedido.items.push({ n: cant, t: item.t, c: item.c });
                 }
             });
 
             if (pedido.items.length === 0) {
-                alert("Selecciona al menos un tanque y marca la casilla correspondiente.");
+                alert("⚠️ Por favor, indica cuántos tanques necesitas y marca la casilla correspondiente.");
                 btn.disabled = false;
                 btn.innerText = "PEDIR GAS AHORA";
                 return;
@@ -188,7 +196,7 @@
 
             try {
                 await addDoc(collection(db, "pedidos"), pedido);
-                alert("¡Pedido enviado!");
+                alert("🚀 ¡Pedido enviado! El repartidor ya puede verte.");
             } catch (e) {
                 alert("Error: " + e.message);
                 btn.disabled = false;
@@ -213,7 +221,7 @@
                     }
                 } else {
                     btn.innerText = "PEDIR GAS AHORA";
-                    btn.className = "w-full p-6 rounded-[2.5rem] font-black text-xl bg-red-600 text-white shadow-2xl";
+                    btn.className = "w-full p-6 rounded-[2.5rem] font-black text-xl bg-red-600 text-white shadow-2xl shadow-red-200";
                     btn.onclick = realizarPedido;
                 }
                 btn.disabled = false;
@@ -221,7 +229,7 @@
         }
 
         window.anularPedido = async (id) => {
-            if(confirm("¿Anular pedido?")) await deleteDoc(doc(db, "pedidos", id));
+            if(confirm("¿Seguro que deseas anular tu pedido?")) await deleteDoc(doc(db, "pedidos", id));
         };
 
         window.cerrarSesion = () => signOut(auth).then(() => window.location.href = "index.html");
